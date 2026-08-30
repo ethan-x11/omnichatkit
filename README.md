@@ -1,5 +1,8 @@
 # OmniChatKit
 
+> [!CAUTION]
+> Disclaimer: Initial release. Not Everything is working yet. Not yet production ready. Please use with caution.
+
 OmniChatKit is a comprehensive, modular React component library designed for building next-generation AI chat interfaces. It provides robust state management, native support for Generative UI (A2UI), and out-of-the-box compatibility with both the **Vercel AI SDK** and the **AG-UI Protocol**.
 
 OmniChatKit comes with a fully bundled set of pre-styled Shadcn components, meaning you can drop it into any Next.js or React application without having to copy-paste or maintain UI primitives.
