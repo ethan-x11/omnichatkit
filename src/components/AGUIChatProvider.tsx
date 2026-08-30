@@ -23,7 +23,16 @@ export function AGUIChatProvider({ children, theme = 'standard', apiEndpoint = '
   useEffect(() => {
     if (sessionStorageMode === 'api' && sessionRoute) {
       fetch(sessionRoute)
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            return res.json();
+          }
+          throw new Error("Expected JSON response");
+        })
         .then(data => {
           if (Array.isArray(data)) setSessions(data);
         })

@@ -27,7 +27,7 @@ export function SessionManager({
     listStyle = {},
     newConversationButtonStyles = {}
   } = sessionManagerComponentStyles;
-  const { sessions, activeSessionId, setActiveSessionId, removeSession, addSession } = useAIChatStore();
+  const { sessions, activeSessionId, setActiveSessionId, removeSession, addSession, sessionStorageMode, sessionRoute } = useAIChatStore();
   const aiContext = React.useContext(AIChatContext);
   const aguiContext = React.useContext(AGUIChatContext);
   const context = aiContext || aguiContext;
@@ -40,31 +40,61 @@ export function SessionManager({
 
   // Restore session messages on mount if there's an active session
   React.useEffect(() => {
-    if (activeSessionId) {
-      const initialSession = sessions.find(s => s.id === activeSessionId);
-      if (initialSession && context && context.setMessages) {
-        const vercelMessages = (initialSession.messages || []).map((m: any) => {
-          let toolInvocations: any[] | undefined = undefined;
-          if (m.toolCalls && m.toolCalls.length > 0) {
-            toolInvocations = m.toolCalls.map((tc: any) => ({
-              state: 'result',
-              toolCallId: tc.id,
-              toolName: tc.function.name,
-              args: JSON.parse(tc.function.arguments || '{}'),
-              result: {}
-            }));
+    const loadInitialSession = async () => {
+      if (activeSessionId) {
+        let initialSession = sessions.find(s => s.id === activeSessionId);
+        
+        if (sessionStorageMode === 'api' && sessionRoute) {
+          try {
+            const response = await fetch(`${sessionRoute}/${activeSessionId}`);
+            if (!response.ok) {
+              if (response.status === 404) {
+                console.error(`Initial session ${activeSessionId} not found on server.`);
+                removeSession(activeSessionId);
+                if (context && context.setMessages) {
+                  context.setMessages([]);
+                }
+                return;
+              }
+              throw new Error(`Failed to fetch initial session: ${response.status} ${response.statusText}`);
+            }
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              initialSession = await response.json();
+            } else {
+              throw new Error(`Expected JSON response, got ${contentType}`);
+            }
+          } catch (error) {
+            console.error('Error fetching initial session:', error);
           }
-          return {
-            id: m.id,
-            role: m.role,
-            content: m.content,
-            createdAt: typeof m.createdAt === 'string' ? new Date(m.createdAt) : m.createdAt,
-            toolInvocations
-          };
-        });
-        context.setMessages(vercelMessages as any[]);
+        }
+
+        if (initialSession && context && context.setMessages) {
+          const vercelMessages = (initialSession.messages || []).map((m: any) => {
+            let toolInvocations: any[] | undefined = undefined;
+            if (m.toolCalls && m.toolCalls.length > 0) {
+              toolInvocations = m.toolCalls.map((tc: any) => ({
+                state: 'result',
+                toolCallId: tc.id,
+                toolName: tc.function.name,
+                args: JSON.parse(tc.function.arguments || '{}'),
+                result: {}
+              }));
+            }
+            return {
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              createdAt: typeof m.createdAt === 'string' ? new Date(m.createdAt) : m.createdAt,
+              toolInvocations
+            };
+          });
+          context.setMessages(vercelMessages as any[]);
+        }
       }
-    }
+    };
+    
+    loadInitialSession();
     // We explicitly only want this to run once on mount!
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -94,11 +124,38 @@ export function SessionManager({
     }
   };
 
-  const handleSessionSelect = (id: string) => {
+  const handleSessionSelect = async (id: string) => {
     if (context && context.stop) {
       context.stop();
     }
-    const sessionToLoad = sessions.find(s => s.id === id);
+    
+    let sessionToLoad = sessions.find(s => s.id === id);
+    
+    if (sessionStorageMode === 'api' && sessionRoute) {
+      try {
+        const response = await fetch(`${sessionRoute}/${id}`);
+        if (!response.ok) {
+          if (response.status === 404) {
+            console.error(`Session ${id} not found on server.`);
+            removeSession(id);
+            if (activeSessionId === id && context && context.setMessages) {
+              context.setMessages([]);
+            }
+            return;
+          }
+          throw new Error(`Failed to fetch session: ${response.status} ${response.statusText}`);
+        }
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          sessionToLoad = await response.json();
+        } else {
+          throw new Error(`Expected JSON response, got ${contentType}`);
+        }
+      } catch (error) {
+        console.error('Error fetching session:', error);
+      }
+    }
+
     if (context && context.setMessages) {
       const vercelMessages = (sessionToLoad?.messages || []).map((m: any) => {
         let toolInvocations: any[] | undefined = undefined;
