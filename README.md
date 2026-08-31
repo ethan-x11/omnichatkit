@@ -57,6 +57,12 @@ export default function ChatPage() {
     >
       {/* SessionManager slides out from the left by default */}
       <SessionManager storageMode="api" collapsible={false} className="w-80 shrink-0" />
+      
+      {/* A2UICanvas renders Generative UI tools */}
+      <A2UICanvas />
+      
+      {/* ChatManager handles the message feed and input */}
+      <ChatManager collapsible={true} position="right" />
     </OmniChat>
   );
 }
@@ -77,9 +83,6 @@ export default function ChatPage() {
         <SessionManager storageMode="api" collapsible={true} position="left" />
         
         <div className="flex flex-1 flex-col relative">
-          {/* A2UICanvas renders Generative UI tools */}
-          <A2UICanvas />
-          
           {/* ChatManager handles the message feed and input */}
           <ChatManager collapsible={true} position="right" />
         </div>
