@@ -319,7 +319,7 @@ export function ChatManager({
         {/* Primary Chat Feed */}
         <div className={`flex flex-col flex-1 h-full min-w-0 ${layout === 'split' && useA2UI ? 'border-r border-inherit' : ''}`}>
           <div 
-            className={cn("flex-1 overflow-y-auto p-4", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
+            className={cn("flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
             style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
           >
             {messages.length === 0 && welcomeScreen && (
@@ -415,10 +415,10 @@ export function ChatManager({
                 }
                 if (!alignment) alignment = 'right';
               } else {
-                if (!alignment) alignment = 'center';
+                if (!alignment) alignment = 'left';
               }
 
-              const alignmentClass = alignment === 'left' ? 'flex flex-col items-start' : (alignment === 'right' ? 'flex flex-col items-end' : 'flex flex-col items-center text-center whitespace-normal');
+              const alignmentClass = alignment === 'left' ? 'flex flex-col items-start' : (alignment === 'right' ? 'flex flex-col items-end' : 'flex flex-col items-center text-left whitespace-normal');
 
               let thinkingContent = '';
               let mainContent = msg.content || '';
@@ -444,7 +444,7 @@ export function ChatManager({
               }
 
               return (
-                <div key={msg.id} className={cn("mb-4 group relative pr-8", alignmentClass, containerStyleClass)} style={containerStyleObj}>
+                <div key={msg.id} className={cn("mb-4 group relative", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
                   {(mainContent || thinkingContent || (!thinkingContent && !hasTool)) && (
                     <div className="font-bold mb-2 flex items-center gap-2">
                       {isUser ? (
@@ -461,7 +461,7 @@ export function ChatManager({
                           )}
                         </>
                       )}
-                      :
+                      
                     </div>
                   )}
 
@@ -479,8 +479,15 @@ export function ChatManager({
                   )}
                   
                   {(mainContent || (!thinkingContent && !hasTool)) ? (
-                    <div className="mt-1 flex flex-col">
-                      <div className={cn(bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass)} style={bubbleStyleObj}>
+                    <div className="mt-1 flex flex-col relative">
+                      <div 
+                        className={cn("relative z-10", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass)} 
+                        style={{
+                          ...bubbleStyleObj,
+                          ...(alignment === 'right' ? { borderBottomRightRadius: '4px' } : {}),
+                          ...(alignment === 'left' ? { borderBottomLeftRadius: '4px' } : {})
+                        }}
+                      >
                         <MarkdownRenderer text={mainContent} />
                       </div>
                     </div>
@@ -489,7 +496,10 @@ export function ChatManager({
                   <Button 
                     variant="ghost" 
                     size="icon-sm" 
-                    className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 text-muted-foreground hover:text-foreground" 
+                    className={cn(
+                      "absolute top-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 text-muted-foreground hover:text-foreground",
+                      alignment === 'right' ? 'left-0' : 'right-0'
+                    )} 
                     onClick={() => handleCopy(msg.id, msg.content)}
                     title="Copy message"
                   >

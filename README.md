@@ -136,9 +136,11 @@ The `ChatManager` component comes with extensive styling and layout capabilities
 - **`welcomeScreen`** (`boolean | ReactNode`): Set to `true` (default) to show the default welcome screen, or pass a custom React element.
 
 #### Component Styling (`chatManagerComponentStyles`)
-You can deeply customize the appearance of the ChatManager by passing nested style objects. We support `backgroundStyle` for all major layout sections:
+You can deeply customize the appearance of the ChatManager by passing nested style objects. We support `backgroundStyle` for all major layout sections, as well as advanced message and badge styling:
 
 ```tsx
+import { User, Bot } from 'lucide-react';
+
 <ChatManager
   chatManagerComponentStyles={{
     backgroundStyle: "bg-slate-900", // Main container background
@@ -147,10 +149,32 @@ You can deeply customize the appearance of the ChatManager by passing nested sty
       titleStyle: "text-blue-400 font-bold",
       collapseButtonStyle: "hover:bg-slate-800"
     },
+    // Customize user and agent badges (name tags/icons)
+    userBadgeStyle: {
+      containerStyle: "bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 rounded-full flex items-center gap-1",
+      textStyle: "text-blue-700 dark:text-blue-300 font-medium text-xs",
+      icon: <User size={12} />
+    },
+    agentBadgeStyle: {
+      containerStyle: "bg-purple-100 dark:bg-purple-900/50 px-2 py-0.5 rounded-full flex items-center gap-1",
+      textStyle: "text-purple-700 dark:text-purple-300 font-medium text-xs",
+      icon: <Bot size={12} />
+    },
     messageStyle: {
       backgroundStyle: "bg-slate-900", // Message feed background
-      userMessageStyle: "bg-blue-600 text-white",
-      assistantMessageStyle: "bg-slate-800 text-slate-200"
+      
+      // Advanced message layout & styling
+      // Note: OmniChatKit automatically applies a sharp "notch" (corner radius) 
+      // to the bottom-right or bottom-left depending on the alignment!
+      userMessageStyle: {
+        alignment: "right", // Align left, right, or center
+        bubbleStyle: "bg-blue-600 text-white shadow-md rounded-2xl px-4 py-3",
+        containerStyle: "mt-2"
+      },
+      assistantMessageStyle: {
+        alignment: "left", // Defaults to left, but can be overridden to center or right
+        bubbleStyle: "bg-slate-800 text-slate-200 shadow-sm rounded-2xl px-4 py-3"
+      }
     },
     inputSectionStyle: {
       backgroundStyle: "bg-slate-950",
