@@ -10,9 +10,42 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from './ui/sheet';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from './ui/dialog';
-import { MessageCircle, PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, Copy, Check, Square, Brain, Wrench, Activity, AlertCircle, PlayCircle, CheckCircle2 } from 'lucide-react';
+import { MessageCircle, PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, Copy, Check, Square, Brain, Wrench, Activity, AlertCircle, PlayCircle, CheckCircle2, User, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from './MarkdownRenderer';
+
+const renderBadge = (
+  text: string, 
+  styleProp?: any, 
+  defaultContainerClass?: string, 
+  defaultTextClass?: string,
+  defaultIcon?: React.ReactNode
+) => {
+  if (!text) return null;
+  const isString = typeof styleProp === 'string';
+  const isObj = typeof styleProp === 'object' && styleProp !== null;
+  
+  const containerClass = cn(
+    defaultContainerClass,
+    isString ? styleProp : (isObj && typeof styleProp.containerStyle === 'string' ? styleProp.containerStyle : undefined)
+  );
+  const containerStyle = isObj && typeof styleProp.containerStyle === 'object' ? styleProp.containerStyle : undefined;
+  
+  const textClass = cn(
+    defaultTextClass,
+    isObj && typeof styleProp.textStyle === 'string' ? styleProp.textStyle : undefined
+  );
+  const textStyle = isObj && typeof styleProp.textStyle === 'object' ? styleProp.textStyle : undefined;
+  
+  const icon = isObj && styleProp.icon !== undefined ? styleProp.icon : defaultIcon;
+  
+  return (
+    <span className={containerClass} style={containerStyle}>
+      {icon}
+      <span className={textClass} style={textStyle}>{text}</span>
+    </span>
+  );
+};
 
 export function ChatManager({ 
   theme, 
@@ -41,7 +74,9 @@ export function ChatManager({
     messageStyle = {},
     inputSectionStyle = {},
     headerStyle = {},
-    backgroundStyle: globalBackgroundStyle
+    backgroundStyle: globalBackgroundStyle,
+    agentBadgeStyle,
+    userBadgeStyle
   } = chatManagerComponentStyles;
 
   const aiContext = React.useContext(AIChatContext);
@@ -81,6 +116,27 @@ export function ChatManager({
   const [isA2UIOpen, setIsA2UIOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [customDimension, setCustomDimension] = useState(450);
+
+  const messageToAgentMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    let activeAgent: string | null = null;
+    if (events) {
+      events.forEach((e: any) => {
+        if (e.type === 'STEP_STARTED' || e.type === 'StepStarted') {
+          activeAgent = e.stepName;
+        }
+        if (activeAgent) {
+          if ((e.type === 'TEXT_MESSAGE_START' || e.type === 'TextMessageStart') && e.messageId) {
+            map.set(e.messageId, activeAgent);
+          }
+          if ((e.type === 'TOOL_CALL_START' || e.type === 'ToolCallStart') && e.toolCallId) {
+            map.set(e.toolCallId, activeAgent);
+          }
+        }
+      });
+    }
+    return map;
+  }, [events]);
 
   const startResizing = (e: React.MouseEvent, dimension: 'width' | 'height') => {
     e.preventDefault();
@@ -329,8 +385,40 @@ export function ChatManager({
 
               const isUser = msg.role === 'user';
               const customStyleRaw = isUser ? messageStyle.userMessageStyle : messageStyle.assistantMessageStyle;
-              const customStyleObj = typeof customStyleRaw === 'object' ? customStyleRaw : undefined;
-              const customStyleClass = typeof customStyleRaw === 'string' ? customStyleRaw : '';
+              
+              let containerStyleClass = '';
+              let containerStyleObj: React.CSSProperties | undefined = undefined;
+              let bubbleStyleClass = '';
+              let bubbleStyleObj: React.CSSProperties | undefined = undefined;
+              let alignment: 'left' | 'right' | 'center' | undefined = undefined;
+
+              if (typeof customStyleRaw === 'string') {
+                containerStyleClass = customStyleRaw;
+              } else if (typeof customStyleRaw === 'object' && customStyleRaw !== null) {
+                if ('containerStyle' in customStyleRaw || 'bubbleStyle' in customStyleRaw || 'alignment' in customStyleRaw) {
+                  const styleDef = customStyleRaw as any;
+                  containerStyleClass = typeof styleDef.containerStyle === 'string' ? styleDef.containerStyle : '';
+                  containerStyleObj = typeof styleDef.containerStyle === 'object' ? styleDef.containerStyle : undefined;
+                  
+                  bubbleStyleClass = typeof styleDef.bubbleStyle === 'string' ? styleDef.bubbleStyle : '';
+                  bubbleStyleObj = typeof styleDef.bubbleStyle === 'object' ? styleDef.bubbleStyle : undefined;
+
+                  alignment = styleDef.alignment;
+                } else {
+                  containerStyleObj = customStyleRaw as React.CSSProperties;
+                }
+              }
+
+              if (isUser) {
+                if (!bubbleStyleClass && !bubbleStyleObj) {
+                  bubbleStyleClass = "bg-white dark:bg-zinc-800 shadow-sm border border-zinc-200 dark:border-zinc-700 rounded-2xl rounded-tr-sm px-4 py-2";
+                }
+                if (!alignment) alignment = 'right';
+              } else {
+                if (!alignment) alignment = 'center';
+              }
+
+              const alignmentClass = alignment === 'left' ? 'flex flex-col items-start' : (alignment === 'right' ? 'flex flex-col items-end' : 'flex flex-col items-center text-center whitespace-normal');
 
               let thinkingContent = '';
               let mainContent = msg.content || '';
@@ -356,7 +444,27 @@ export function ChatManager({
               }
 
               return (
-                <div key={msg.id} className={cn("mb-4 group relative pr-8", customStyleClass)} style={customStyleObj}>
+                <div key={msg.id} className={cn("mb-4 group relative pr-8", alignmentClass, containerStyleClass)} style={containerStyleObj}>
+                  {(mainContent || thinkingContent || (!thinkingContent && !hasTool)) && (
+                    <div className="font-bold mb-2 flex items-center gap-2">
+                      {isUser ? (
+                        renderBadge('You', userBadgeStyle, "flex items-center gap-1", "", <User size={14} />)
+                      ) : (
+                        <>
+                          {renderBadge('AI', agentBadgeStyle && !messageToAgentMap.get(msg.id) ? agentBadgeStyle : undefined, "flex items-center gap-1", "", <Bot size={14} />)}
+                          {messageToAgentMap.get(msg.id) && renderBadge(
+                            messageToAgentMap.get(msg.id) as string, 
+                            agentBadgeStyle, 
+                            "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1", 
+                            "text-zinc-700 dark:text-zinc-300",
+                            <Bot size={12} />
+                          )}
+                        </>
+                      )}
+                      :
+                    </div>
+                  )}
+
                   {thinkingContent && (
                     <details className="mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group/think">
                       <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
@@ -370,10 +478,11 @@ export function ChatManager({
                     </details>
                   )}
                   
-                  {mainContent || (!thinkingContent && !hasTool) ? (
+                  {(mainContent || (!thinkingContent && !hasTool)) ? (
                     <div className="mt-1 flex flex-col">
-                      <span className="font-bold mb-2">{isUser ? 'You' : 'AI'}: </span>
-                      <MarkdownRenderer text={mainContent} />
+                      <div className={cn(bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass)} style={bubbleStyleObj}>
+                        <MarkdownRenderer text={mainContent} />
+                      </div>
                     </div>
                   ) : null}
                   
@@ -407,7 +516,16 @@ export function ChatManager({
                             <summary className="flex items-center justify-between cursor-pointer list-none p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/50">
                               <div className="flex items-center gap-2">
                                 <Wrench size={14} />
-                                <span>Tool Call: {tool.toolName}</span>
+                                <span className="flex items-center">
+                                  Tool Call: {tool.toolName}
+                                  {messageToAgentMap.get(tool.toolCallId) && renderBadge(
+                                    messageToAgentMap.get(tool.toolCallId) as string,
+                                    agentBadgeStyle,
+                                    "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1 ml-2",
+                                    "text-zinc-700 dark:text-zinc-300",
+                                    <Bot size={12} />
+                                  )}
+                                </span>
                               </div>
                               <ChevronDown size={14} className="transition-transform duration-200 group-open:rotate-180 opacity-50" />
                             </summary>

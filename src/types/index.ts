@@ -66,9 +66,15 @@ export interface AIChatProviderProps {
 
 export type ToggleButtonPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
+export interface MessageContentStyles {
+  containerStyle?: React.CSSProperties | string;
+  bubbleStyle?: React.CSSProperties | string;
+  alignment?: 'left' | 'right' | 'center';
+}
+
 export interface MessageStyles {
-  assistantMessageStyle?: React.CSSProperties | string;
-  userMessageStyle?: React.CSSProperties | string;
+  assistantMessageStyle?: React.CSSProperties | string | MessageContentStyles;
+  userMessageStyle?: React.CSSProperties | string | MessageContentStyles;
   thinkingStepStyle?: React.CSSProperties | string;
   backgroundStyle?: React.CSSProperties | string;
 }
@@ -80,11 +86,19 @@ export interface InputStyles {
   backgroundStyle?: React.CSSProperties | string;
 }
 
+export interface BadgeStyles {
+  containerStyle?: React.CSSProperties | string;
+  textStyle?: React.CSSProperties | string;
+  icon?: ReactNode;
+}
+
 export interface ChatManagerComponentStyles {
   messageStyle?: MessageStyles;
   inputSectionStyle?: InputStyles;
   headerStyle?: HeaderStyles;
   backgroundStyle?: React.CSSProperties | string;
+  agentBadgeStyle?: BadgeStyles | string;
+  userBadgeStyle?: BadgeStyles | string;
 }
 
 export type ChatManagerBaseProps = {
