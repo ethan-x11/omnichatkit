@@ -15,12 +15,14 @@ export interface LabelStyles {
   titleStyle?: React.CSSProperties | string;
   subtitleStyle?: React.CSSProperties | string;
   disclaimerStyle?: React.CSSProperties | string;
+  backgroundStyle?: React.CSSProperties | string;
 }
 
 export interface HeaderStyles {
   titleStyle?: React.CSSProperties | string;
   subtitleStyle?: React.CSSProperties | string;
   collapseButtonStyle?: React.CSSProperties | string;
+  backgroundStyle?: React.CSSProperties | string;
 }
 
 export interface ChatLabels {
@@ -68,18 +70,21 @@ export interface MessageStyles {
   assistantMessageStyle?: React.CSSProperties | string;
   userMessageStyle?: React.CSSProperties | string;
   thinkingStepStyle?: React.CSSProperties | string;
+  backgroundStyle?: React.CSSProperties | string;
 }
 
 export interface InputStyles {
   inputStyle?: React.CSSProperties | string;
   buttonStyle?: React.CSSProperties | string;
   containerStyle?: React.CSSProperties | string;
+  backgroundStyle?: React.CSSProperties | string;
 }
 
 export interface ChatManagerComponentStyles {
   messageStyle?: MessageStyles;
   inputSectionStyle?: InputStyles;
   headerStyle?: HeaderStyles;
+  backgroundStyle?: React.CSSProperties | string;
 }
 
 export type ChatManagerBaseProps = {

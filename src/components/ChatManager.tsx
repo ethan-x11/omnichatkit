@@ -10,8 +10,9 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from './ui/sheet';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from './ui/dialog';
-import { MessageCircle, PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, Copy, Check, Square } from 'lucide-react';
+import { MessageCircle, PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, Copy, Check, Square, Brain, Wrench, Activity, AlertCircle, PlayCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 export function ChatManager({ 
   theme, 
@@ -29,7 +30,7 @@ export function ChatManager({
   defaultOpen = false,
   autoScroll = true,
   inputProps = {},
-  welcomeScreen,
+  welcomeScreen = true,
   labels = {},
   agentId,
   sessionId,
@@ -39,7 +40,8 @@ export function ChatManager({
   const {
     messageStyle = {},
     inputSectionStyle = {},
-    headerStyle = {}
+    headerStyle = {},
+    backgroundStyle: globalBackgroundStyle
   } = chatManagerComponentStyles;
 
   const aiContext = React.useContext(AIChatContext);
@@ -51,6 +53,7 @@ export function ChatManager({
   }
 
   const { messages, input, handleInputChange, handleSubmit, status } = context;
+  const events = (context as any).events || [];
   const { addSession, setActiveSessionId, activeSessionId, updateSessionMessages } = useAIChatStore();
 
   const activeSessionIdRef = React.useRef(activeSessionId);
@@ -197,10 +200,16 @@ export function ChatManager({
   ) : null;
 
   const innerContent = (
-    <div className={cn(`flex border rounded-xl flex-col relative ${chatContainerClass} ${sizeClass}`, className)} style={combinedStyle}>
+    <div 
+      className={cn(`flex border rounded-xl flex-col relative ${chatContainerClass} ${sizeClass}`, typeof globalBackgroundStyle === 'string' ? globalBackgroundStyle : "", className)} 
+      style={{...(typeof globalBackgroundStyle === 'object' ? globalBackgroundStyle : {}), ...combinedStyle}}
+    >
       {resizeHandle}
       {(isSheet || isFloating || isEmbedded) && (
-        <div className="p-4 border-b flex flex-row items-center justify-between shrink-0">
+        <div 
+          className={cn("p-4 border-b flex flex-row items-center justify-between shrink-0", typeof headerStyle.backgroundStyle === 'string' ? headerStyle.backgroundStyle : "")}
+          style={typeof headerStyle.backgroundStyle === 'object' ? headerStyle.backgroundStyle : undefined}
+        >
           {(isSheet || isEmbeddedCollapsible) && (position === 'right' || position === 'bottom') && (
             isSheet ? (
               <SheetClose render={<Button variant="ghost" size="icon-sm" className={cn("h-8 w-8", typeof headerStyle.collapseButtonStyle === 'string' ? headerStyle.collapseButtonStyle : "")} style={typeof headerStyle.collapseButtonStyle === 'object' ? headerStyle.collapseButtonStyle : undefined} suppressHydrationWarning={true}><CollapseIcon size={16} /></Button>} />
@@ -253,7 +262,10 @@ export function ChatManager({
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Primary Chat Feed */}
         <div className={`flex flex-col flex-1 h-full min-w-0 ${layout === 'split' && useA2UI ? 'border-r border-inherit' : ''}`}>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div 
+            className={cn("flex-1 overflow-y-auto p-4", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
+            style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
+          >
             {messages.length === 0 && welcomeScreen && (
               <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
                 {typeof welcomeScreen === 'boolean' ? (
@@ -272,18 +284,99 @@ export function ChatManager({
               </div>
             )}
             {messages.map((msg) => {
-              // Check if the message contains a tool invocation that requires rendering UI
               const hasTool = msg.toolInvocations && msg.toolInvocations.length > 0;
               
+              if ((msg.role as string) === 'reasoning') {
+                return (
+                  <details key={msg.id} className="mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group">
+                    <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
+                      <Brain size={14} className="animate-pulse" />
+                      <span>Reasoning</span>
+                      <ChevronDown size={14} className="ml-auto transition-transform group-open:rotate-180" />
+                    </summary>
+                    <div className="text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-2">{msg.content}</div>
+                  </details>
+                );
+              }
+
+              if ((msg.role as string) === 'activity') {
+                return (
+                  <div key={msg.id} className="mb-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 text-sm border border-blue-100 dark:border-blue-900">
+                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1 font-medium">
+                      <Activity size={14} />
+                      <span>Activity Update</span>
+                    </div>
+                    <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
+                      {msg.content}
+                    </div>
+                  </div>
+                );
+              }
+
+              if ((msg.role as string) === 'tool') {
+                return (
+                  <div key={msg.id} className="mb-4 bg-green-50 dark:bg-green-950/30 rounded-lg p-3 text-sm border border-green-100 dark:border-green-900">
+                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1 font-medium">
+                      <CheckCircle2 size={14} />
+                      <span>Tool Result</span>
+                    </div>
+                    <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
+                      {msg.content}
+                    </div>
+                  </div>
+                );
+              }
+
               const isUser = msg.role === 'user';
               const customStyleRaw = isUser ? messageStyle.userMessageStyle : messageStyle.assistantMessageStyle;
               const customStyleObj = typeof customStyleRaw === 'object' ? customStyleRaw : undefined;
               const customStyleClass = typeof customStyleRaw === 'string' ? customStyleRaw : '';
 
+              let thinkingContent = '';
+              let mainContent = msg.content || '';
+              
+              if (!isUser && typeof mainContent === 'string') {
+                const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|<think\/>)/i;
+                const match = mainContent.match(thinkRegex);
+                if (match) {
+                  thinkingContent = match[1].trim();
+                  mainContent = mainContent.replace(match[0], '').trim();
+                } else {
+                  if (mainContent.includes('<think>')) {
+                    const parts = mainContent.split('<think>');
+                    mainContent = parts[0].trim();
+                    thinkingContent = parts[1].trim();
+                  } else if (mainContent.includes('</think>') || mainContent.includes('<think/>')) {
+                    const closeTag = mainContent.includes('</think>') ? '</think>' : '<think/>';
+                    const parts = mainContent.split(closeTag);
+                    thinkingContent = parts[0].replace(/<think>/i, '').trim();
+                    mainContent = parts.slice(1).join(closeTag).trim();
+                  }
+                }
+              }
+
               return (
                 <div key={msg.id} className={cn("mb-4 group relative pr-8", customStyleClass)} style={customStyleObj}>
-                  <span className="font-bold">{isUser ? 'You' : 'AI'}: </span>
-                  <span>{msg.content}</span>
+                  {thinkingContent && (
+                    <details className="mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group/think">
+                      <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
+                        <Brain size={14} className="animate-pulse" />
+                        <span>Reasoning</span>
+                        <ChevronDown size={14} className="ml-auto transition-transform group-open/think:rotate-180" />
+                      </summary>
+                      <div className="mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-4">
+                        <MarkdownRenderer text={thinkingContent} className="text-zinc-600 dark:text-zinc-400" />
+                      </div>
+                    </details>
+                  )}
+                  
+                  {mainContent || (!thinkingContent && !hasTool) ? (
+                    <div className="mt-1 flex flex-col">
+                      <span className="font-bold mb-2">{isUser ? 'You' : 'AI'}: </span>
+                      <MarkdownRenderer text={mainContent} />
+                    </div>
+                  ) : null}
+                  
                   <Button 
                     variant="ghost" 
                     size="icon-sm" 
@@ -294,36 +387,95 @@ export function ChatManager({
                     {copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
                   </Button>
                   
-                  {useA2UI && layout === 'inline' && hasTool && (
-                    <div className="mt-2">
-                      {msg.toolInvocations?.map(tool => (
-                        tool.toolName === a2uiToolName ? (
-                          <A2UICanvas 
-                            key={tool.toolCallId} 
-                            componentPayload={{ 
-                              name: tool.args.componentName || tool.args.name || tool.toolName, 
-                              props: tool.args.props || tool.args 
-                            }} 
-                          />
-                        ) : null
-                      ))}
+                  {hasTool && (
+                    <div className="mt-3 flex flex-col gap-2">
+                      {msg.toolInvocations?.map((tool: any) => {
+                        if (useA2UI && layout === 'inline' && tool.toolName === a2uiToolName) {
+                          return (
+                            <A2UICanvas 
+                              key={tool.toolCallId} 
+                              componentPayload={{ 
+                                name: tool.args.componentName || tool.args.name || tool.toolName, 
+                                props: tool.args.props || tool.args 
+                              }} 
+                            />
+                          );
+                        }
+                        
+                        return (
+                          <details key={tool.toolCallId} className="group [&_summary::-webkit-details-marker]:hidden mb-2">
+                            <summary className="flex items-center justify-between cursor-pointer list-none p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/50">
+                              <div className="flex items-center gap-2">
+                                <Wrench size={14} />
+                                <span>Tool Call: {tool.toolName}</span>
+                              </div>
+                              <ChevronDown size={14} className="transition-transform duration-200 group-open:rotate-180 opacity-50" />
+                            </summary>
+                            <div className="p-3 border border-t-0 border-zinc-200 dark:border-zinc-800 rounded-b-md bg-zinc-50/50 dark:bg-zinc-900/25 -mt-2 pt-4">
+                              <div className="overflow-hidden rounded-md text-xs">
+                                <MarkdownRenderer text={`\`\`\`json\n${typeof tool.args === 'string' ? tool.args : JSON.stringify(tool.args, null, 2)}\n\`\`\``} />
+                              </div>
+                              {tool.result && (
+                                <div className="mt-2 bg-green-50 dark:bg-green-950/30 rounded p-2 text-xs border border-green-100 dark:border-green-900">
+                                  <div className="text-green-600 dark:text-green-400 font-medium mb-1 flex items-center gap-1">
+                                    <CheckCircle2 size={12} /> Result
+                                  </div>
+                                  <div className="overflow-hidden rounded-md text-xs [&_.prose]:text-zinc-700 dark:[&_.prose]:text-zinc-300">
+                                    <MarkdownRenderer text={`\`\`\`json\n${typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)}\n\`\`\``} />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </details>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
               );
             })}
-            {isLoading && (
-              <div 
-                className={cn("text-sm text-zinc-500 animate-pulse", typeof messageStyle.thinkingStepStyle === 'string' ? messageStyle.thinkingStepStyle : "")}
-                style={typeof messageStyle.thinkingStepStyle === 'object' ? messageStyle.thinkingStepStyle : undefined}
-              >
-                AI is thinking...
-              </div>
-            )}
+            
+            {(() => {
+              // Extract active lifecycle events
+              const runError = events.find((e: any) => e.type === 'RUN_ERROR' || e.type === 'RunError');
+              if (runError) {
+                return (
+                  <div className="mb-4 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 text-sm border border-red-200 dark:border-red-900">
+                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1 font-medium">
+                      <AlertCircle size={14} />
+                      <span>Error</span>
+                    </div>
+                    <div className="text-red-700 dark:text-red-300">{runError.message || 'An error occurred during the run.'}</div>
+                  </div>
+                );
+              }
+
+              if (isLoading) {
+                // Find the latest step event
+                const stepEvents = events.filter((e: any) => e.type === 'STEP_STARTED' || e.type === 'StepStarted' || e.type === 'STEP_FINISHED' || e.type === 'StepFinished');
+                const lastStep = stepEvents[stepEvents.length - 1];
+                const activeStepName = (lastStep && (lastStep.type === 'STEP_STARTED' || lastStep.type === 'StepStarted')) ? lastStep.stepName : null;
+                
+                return (
+                  <div 
+                    className={cn("text-sm text-zinc-500 animate-pulse flex items-center gap-2", typeof messageStyle.thinkingStepStyle === 'string' ? messageStyle.thinkingStepStyle : "")}
+                    style={typeof messageStyle.thinkingStepStyle === 'object' ? messageStyle.thinkingStepStyle : undefined}
+                  >
+                    <PlayCircle size={14} className="animate-spin" />
+                    <span>{activeStepName ? `Executing step: ${activeStepName}...` : 'AI is thinking...'}</span>
+                  </div>
+                );
+              }
+              return null;
+            })()}
             <div ref={messagesEndRef} />
           </div>
           
-          <form onSubmit={handleFormSubmit} className={cn("p-4 border-t border-inherit flex flex-col gap-2 shrink-0", typeof inputSectionStyle.containerStyle === 'string' ? inputSectionStyle.containerStyle : "")} style={typeof inputSectionStyle.containerStyle === 'object' ? inputSectionStyle.containerStyle : undefined}>
+          <form 
+            onSubmit={handleFormSubmit} 
+            className={cn("p-4 border-t border-inherit flex flex-col gap-2 shrink-0", typeof inputSectionStyle.containerStyle === 'string' ? inputSectionStyle.containerStyle : "", typeof inputSectionStyle.backgroundStyle === 'string' ? inputSectionStyle.backgroundStyle : "")} 
+            style={{...(typeof inputSectionStyle.containerStyle === 'object' ? inputSectionStyle.containerStyle : {}), ...(typeof inputSectionStyle.backgroundStyle === 'object' ? inputSectionStyle.backgroundStyle : {})}}
+          >
             <div className="flex gap-2 w-full">
               <Input 
                 value={input} 
@@ -472,7 +624,7 @@ export function ChatManager({
             }
           />
           <DialogContent 
-            className="max-w-[90vw] md:max-w-[800px] w-full h-[85vh] p-0 border-none bg-transparent shadow-none" 
+            className="flex flex-col overflow-hidden max-w-[90vw] md:max-w-[800px] w-full h-[85vh] p-0 border-none bg-transparent shadow-none" 
             showCloseButton={true}
             showOverlay={false}
             style={getFloatingDialogStyle(collapseToggleButtonPosition)}
