@@ -90,7 +90,7 @@ export function ChatManager({
 
   const { messages, input, handleInputChange, handleSubmit, status } = context;
   const events = (context as any).events || [];
-  const { ensureSession, setActiveSessionId, activeSessionId, sessionStorageMode, updateSessionMessages } = useAIChatStore();
+  const { setActiveSessionId, activeSessionId, sessionStorageMode, updateSessionMessages } = useAIChatStore();
   const sessionsEnabled = sessionStorageMode !== 'disabled';
 
   const activeSessionIdRef = React.useRef(activeSessionId);
@@ -197,47 +197,17 @@ export function ChatManager({
     }
   }, [messages, autoScroll]);
 
-  const ensureActiveSession = (firstMessage: string) => ensureSession(firstMessage, sessionId);
-
-  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const prompt = input.trim();
-    if (!prompt) return;
-
-    try {
-      const resolvedSessionId = await ensureActiveSession(prompt);
-      handleSubmit(e, resolvedSessionId ? { body: { sessionId: resolvedSessionId } } : undefined);
-    } catch (error) {
-      console.error('Failed to create a session before sending the message:', error);
-    }
-  };
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => handleSubmit(e);
 
   const handleChipClick = async (prompt: string) => {
     if (!prompt.trim() || !context?.append) return;
 
     try {
-      const resolvedSessionId = await ensureActiveSession(prompt);
-      await context.append(
-        { role: 'user', content: prompt },
-        resolvedSessionId ? { body: { sessionId: resolvedSessionId } } : undefined,
-      );
+      await context.append({ role: 'user', content: prompt });
     } catch (error) {
-      console.error('Failed to create a session before sending the prompt chip:', error);
+      console.error('Failed to send the prompt chip:', error);
     }
   };
-
-  // Covers messages appended through the chat context instead of this component's form.
-  React.useEffect(() => {
-    if (!sessionsEnabled) return;
-    if (activeSessionId || sessionId) return;
-
-    const firstUserMessage = messages.find((message) => message.role === 'user' && message.content.trim());
-    if (!firstUserMessage) return;
-
-    void ensureActiveSession(firstUserMessage.content).catch((error) => {
-      console.error('Failed to create a session for the outgoing message:', error);
-    });
-  }, [activeSessionId, messages, sessionId, sessionsEnabled]);
   
   const getTogglePositionStyle = (pos?: string): React.CSSProperties => {
     switch (pos) {

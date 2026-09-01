@@ -9,8 +9,6 @@ import type { StorageMode } from '../types';
 // Expose the return type of useChat mixed with our custom properties
 export type UseChatHelpers = ReturnType<typeof useChat>;
 export type ChatContextHelpers = UseChatHelpers & {
-  generateSessionTitle: (messages: SessionTitleMessage[]) => Promise<string>;
-  isGeneratingSessionTitle: boolean;
   sessionStorageMode: StorageMode;
 };
 
@@ -22,6 +20,7 @@ export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/a
   const setSessionRoute = useAIChatStore((state) => state.setSessionRoute);
   const loadSessions = useAIChatStore((state) => state.loadSessions);
   const ensureSession = useAIChatStore((state) => state.ensureSession);
+  const renameSession = useAIChatStore((state) => state.renameSession);
   const activeSessionId = useAIChatStore((state) => state.activeSessionId);
 
   // Initialize store with props
@@ -52,7 +51,7 @@ export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/a
   });
   const titleResponseRef = React.useRef('');
   const titleChatIdRef = React.useRef(`omnichatkit-title-${Math.random().toString(36).slice(2)}`);
-  const [isGeneratingSessionTitle, setIsGeneratingSessionTitle] = React.useState(false);
+  const autoTitledSessionIdsRef = React.useRef(new Set<string>());
   const titleChatHelpers = useChat({
     api: finalApiRoute,
     id: titleChatIdRef.current,
@@ -62,29 +61,13 @@ export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/a
     },
   });
 
-  const sessionAwareAppend = React.useCallback(async (message: any, requestOptions?: any) => {
-    if (!sessionsEnabled) {
-      return chatHelpers.append(message, requestOptions);
-    }
-
-    const requestedSessionId = requestOptions?.body?.sessionId ?? sessionId;
-    const firstMessage = typeof message.content === 'string' ? message.content : 'New Session';
-    const resolvedSessionId = await ensureSession(firstMessage, requestedSessionId);
-
-    return chatHelpers.append(message, {
-      ...requestOptions,
-      body: { ...requestOptions?.body, ...(resolvedSessionId ? { sessionId: resolvedSessionId } : {}) },
-    });
-  }, [chatHelpers.append, ensureSession, sessionId, sessionsEnabled]);
-
-  const generateSessionTitle = React.useCallback(async (messages: SessionTitleMessage[]) => {
+  const generateInitialSessionTitle = React.useCallback(async (messages: SessionTitleMessage[]) => {
     if (!sessionsEnabled) {
       throw new Error('Session titles require sessionStorageMode to be "memory" or "api".');
     }
 
     titleResponseRef.current = '';
     titleChatHelpers.setMessages([]);
-    setIsGeneratingSessionTitle(true);
 
     try {
       await titleChatHelpers.append(
@@ -96,17 +79,55 @@ export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/a
       return title;
     } finally {
       titleChatHelpers.setMessages([]);
-      setIsGeneratingSessionTitle(false);
     }
   }, [sessionsEnabled, titleChatHelpers.append, titleChatHelpers.messages, titleChatHelpers.setMessages]);
+
+  const sessionAwareAppend = React.useCallback(async (message: any, requestOptions?: any) => {
+    if (!sessionsEnabled) {
+      return chatHelpers.append(message, requestOptions);
+    }
+
+    const stateBeforeAppend = useAIChatStore.getState();
+    const requestedSessionId = requestOptions?.body?.sessionId ?? sessionId;
+    const activeSession = stateBeforeAppend.sessions.find((session) => session.id === stateBeforeAppend.activeSessionId);
+    // A title is generated only for the first message of a newly created
+    // conversation. A configured initial sessionId must not suppress this
+    // after the user has explicitly opened a new conversation.
+    const isNewSession = !stateBeforeAppend.activeSessionId
+      ? !requestedSessionId
+      : activeSession?.title === 'New Session' && !activeSession.messages?.length;
+    const firstMessage = typeof message.content === 'string' ? message.content : 'New Session';
+    const resolvedSessionId = await ensureSession(firstMessage, requestedSessionId);
+    const response = chatHelpers.append(message, {
+      ...requestOptions,
+      body: { ...requestOptions?.body, ...(resolvedSessionId ? { sessionId: resolvedSessionId } : {}) },
+    });
+
+    if (isNewSession && resolvedSessionId && !autoTitledSessionIdsRef.current.has(resolvedSessionId)) {
+      autoTitledSessionIdsRef.current.add(resolvedSessionId);
+      void generateInitialSessionTitle([{ role: message.role, content: message.content }])
+        .then((title) => renameSession(resolvedSessionId, title))
+        .catch((error) => console.error('Failed to generate a title for the new session:', error));
+    }
+
+    return response;
+  }, [chatHelpers.append, ensureSession, generateInitialSessionTitle, renameSession, sessionId, sessionsEnabled]);
+
+  const sessionAwareHandleSubmit = React.useCallback((event?: { preventDefault?: () => void }, requestOptions?: any) => {
+    event?.preventDefault?.();
+    const content = chatHelpers.input.trim();
+    if (!content) return;
+
+    chatHelpers.setInput('');
+    void sessionAwareAppend({ role: 'user', content }, requestOptions);
+  }, [chatHelpers.input, chatHelpers.setInput, sessionAwareAppend]);
 
   const chatContextValue = React.useMemo(() => ({
     ...chatHelpers,
     append: sessionAwareAppend,
-    generateSessionTitle,
-    isGeneratingSessionTitle,
+    handleSubmit: sessionAwareHandleSubmit,
     sessionStorageMode,
-  }), [chatHelpers, generateSessionTitle, isGeneratingSessionTitle, sessionAwareAppend, sessionStorageMode]);
+  }), [chatHelpers, sessionAwareAppend, sessionAwareHandleSubmit, sessionStorageMode]);
 
   return (
     <AIChatContext.Provider value={chatContextValue}>

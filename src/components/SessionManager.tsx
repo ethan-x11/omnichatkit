@@ -4,10 +4,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui
 import { Button } from './ui/button';
 import { SessionManagerProps } from '../types';
 import { useAIChatStore } from '../store/useAIChatStore';
-import type { ChatSession } from '../store/useAIChatStore';
 import { AIChatContext } from './AIChatProvider';
 import { AGUIChatContext } from './AGUIChatProvider';
-import { PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, MessageSquarePlus, Trash2, MessageSquare, Pin, PinOff, Pencil, LoaderCircle } from 'lucide-react';
+import { PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, MessageSquarePlus, Trash2, MessageSquare, Pin, PinOff, Pencil, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SheetClose } from './ui/sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
@@ -56,7 +55,8 @@ export function SessionManager({
   
   const [isOpen, setIsOpen] = useState(false);
   const [isInlineCollapsed, setIsInlineCollapsed] = useState(false);
-  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [sessionTitle, setSessionTitle] = useState('');
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   const configuredSessionStorageMode = context?.sessionStorageMode ?? sessionStorageMode;
@@ -68,7 +68,7 @@ export function SessionManager({
   const isInlineCollapsible = collapsible === 'inline';
 
   React.useEffect(() => {
-    const intervalId = window.setInterval(() => setCurrentTime(Date.now()), 1000);
+    const intervalId = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
     return () => window.clearInterval(intervalId);
   }, []);
 
@@ -187,24 +187,13 @@ export function SessionManager({
     onSessionSelect?.(id);
   };
 
-  const handleAgentRename = async (session: ChatSession) => {
-    const chatContext = context;
-    if (!chatContext?.generateSessionTitle) return;
-
-    const sourceMessages = session.id === activeSessionId && chatContext.messages.length > 0
-      ? chatContext.messages
-      : session.messages || [];
-
-    if (sourceMessages.length === 0) return;
-
-    setRenamingSessionId(session.id);
+  const handleRename = async (id: string) => {
     try {
-      const title = await chatContext.generateSessionTitle(sourceMessages);
-      await renameSession(session.id, title);
+      await renameSession(id, sessionTitle);
+      setEditingSessionId(null);
+      setSessionTitle('');
     } catch (error) {
-      console.error('Failed to generate a session title:', error);
-    } finally {
-      setRenamingSessionId(null);
+      console.error('Failed to rename the session:', error);
     }
   };
 
@@ -319,16 +308,57 @@ export function SessionManager({
               style={typeof listStyle?.itemStyle === 'object' ? listStyle.itemStyle : undefined}
               onClick={() => handleSessionSelect(s.id)}
             >
-              <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
-                <MessageSquare size={16} className="shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <span className={cn("block truncate text-sm", typeof listStyle?.textStyle === 'string' ? listStyle.textStyle : "")} style={typeof listStyle?.textStyle === 'object' ? listStyle.textStyle : undefined}>{s.title}</span>
-                  <span className={cn("block truncate text-xs text-muted-foreground", typeof listStyle?.timeStyle === 'string' ? listStyle.timeStyle : "")} style={typeof listStyle?.timeStyle === 'object' ? listStyle.timeStyle : undefined} title={new Date(s.updatedAt).toLocaleString()}>
-                    {formatRelativeTime(s.updatedAt, currentTime)}
-                  </span>
+              {editingSessionId === s.id ? (
+                <form
+                  className="flex min-w-0 flex-1 items-center gap-1"
+                  onClick={(event) => event.stopPropagation()}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleRename(s.id);
+                  }}
+                >
+                  <input
+                    autoFocus
+                    value={sessionTitle}
+                    onChange={(event) => setSessionTitle(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') {
+                        setEditingSessionId(null);
+                        setSessionTitle('');
+                      }
+                    }}
+                    className="h-7 min-w-0 flex-1 rounded border bg-background px-2 text-sm outline-none focus:ring-1 focus:ring-ring"
+                    aria-label="Conversation title"
+                  />
+                  <Button type="submit" variant="ghost" size="icon-sm" className="h-7 w-7" title="Save title">
+                    <Check size={14} />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="h-7 w-7"
+                    title="Cancel rename"
+                    onClick={() => {
+                      setEditingSessionId(null);
+                      setSessionTitle('');
+                    }}
+                  >
+                    <X size={14} />
+                  </Button>
+                </form>
+              ) : (
+                <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
+                  <MessageSquare size={16} className="shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <span className={cn("block truncate text-sm", typeof listStyle?.textStyle === 'string' ? listStyle.textStyle : "")} style={typeof listStyle?.textStyle === 'object' ? listStyle.textStyle : undefined}>{s.title}</span>
+                    <span className={cn("block truncate text-xs text-muted-foreground", typeof listStyle?.timeStyle === 'string' ? listStyle.timeStyle : "")} style={typeof listStyle?.timeStyle === 'object' ? listStyle.timeStyle : undefined} title={new Date(s.updatedAt).toLocaleString()}>
+                      {formatRelativeTime(s.updatedAt, currentTime)}
+                    </span>
+                  </div>
+                  {s.metadata?.isPinned && <Pin size={13} className="shrink-0 text-muted-foreground" aria-label="Pinned" />}
                 </div>
-                {s.metadata?.isPinned && <Pin size={13} className="shrink-0 text-muted-foreground" aria-label="Pinned" />}
-              </div>
+              )}
               
               <div className={cn("flex items-center transition-opacity", activeSessionId === s.id ? "opacity-100" : "opacity-0 group-hover:opacity-100")} onClick={(e) => e.stopPropagation()}>
                 <Button
@@ -344,11 +374,13 @@ export function SessionManager({
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 text-muted-foreground"
-                  title="Generate conversation title"
-                  disabled={renamingSessionId !== null || (!s.messages?.length && (s.id !== activeSessionId || !context?.messages.length))}
-                  onClick={() => void handleAgentRename(s)}
+                  title="Rename conversation"
+                  onClick={() => {
+                    setEditingSessionId(s.id);
+                    setSessionTitle(s.title);
+                  }}
                 >
-                  {renamingSessionId === s.id ? <LoaderCircle size={14} className="animate-spin" /> : <Pencil size={14} />}
+                  <Pencil size={14} />
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger render={
