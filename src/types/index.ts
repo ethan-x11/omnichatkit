@@ -170,33 +170,31 @@ export interface SessionListStyles {
   textStyle?: React.CSSProperties | string;
   timeStyle?: React.CSSProperties | string;
   listItemIconStyles?: {
-    Icon?: ReactNode;
-    IconStyle?: React.CSSProperties | string;
+    icon?: ReactNode;
+    iconStyle?: React.CSSProperties | string;
   };
   listItemPinButtonStyles?: {
-    Icon?: ReactNode;
-    IconStyles?: React.CSSProperties | string;
+    icon?: ReactNode;
+    iconStyles?: React.CSSProperties | string;
   };
   listItemMenuButtonStyles?: {
-    Icon?: ReactNode;
-    IconStyle?: React.CSSProperties | string;
+    icon?: ReactNode;
+    iconStyle?: React.CSSProperties | string;
   };
   listItemRenameButtonStyles?: {
-    Icon?: ReactNode;
-    IconStyle?: React.CSSProperties | string;
-    Text?: ReactNode;
-    TextStyle?: React.CSSProperties | string;
+    containerStyle: React.CSSProperties | string;
+    icon?: ReactNode;
+    iconStyle?: React.CSSProperties | string;
+    text?: ReactNode;
+    textStyle?: React.CSSProperties | string;
   };
   listItemDeleteButtonStyles?: {
-    Icon?: ReactNode;
-    IconStyle?: React.CSSProperties | string;
-    Text?: ReactNode;
-    TextStyle?: React.CSSProperties | string;
+    containerStyle: React.CSSProperties | string;
+    icon?: ReactNode;
+    iconStyle?: React.CSSProperties | string;
+    text?: ReactNode;
+    textStyle?: React.CSSProperties | string;
   };
-  /** @deprecated Use listItemDeleteButtonStyles instead. */
-  deleteButtonStyle?: React.CSSProperties | string;
-  /** @deprecated Use listItemDeleteButtonStyles.IconStyle instead. */
-  deleteIconStyle?: React.CSSProperties | string;
 }
 
 export interface NewConversationButtonStyles {

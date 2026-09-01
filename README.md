@@ -229,11 +229,11 @@ Use `sessionManagerComponentStyles.listStyle` to replace the list icons or style
 <SessionManager
   sessionManagerComponentStyles={{
     listStyle: {
-      listItemIconStyles: { Icon: <MessageSquare />, IconStyle: 'text-primary' },
-      listItemPinButtonStyles: { Icon: <Pin />, IconStyles: 'text-primary' },
-      listItemMenuButtonStyles: { Icon: <MoreHorizontal />, IconStyle: 'text-primary' },
-      listItemRenameButtonStyles: { Icon: <Pencil />, IconStyle: 'text-primary', Text: 'Edit', TextStyle: 'font-semibold' },
-      listItemDeleteButtonStyles: { Icon: <Trash2 />, IconStyle: 'text-destructive', Text: 'Remove', TextStyle: 'font-semibold' },
+      listItemIconStyles: { icon: <MessageSquare />, iconStyle: 'text-primary' },
+      listItemPinButtonStyles: { icon: <Pin />, iconStyles: 'text-primary' },
+      listItemMenuButtonStyles: { icon: <MoreHorizontal />, iconStyle: 'text-primary' },
+      listItemRenameButtonStyles: { icon: <Pencil />, iconStyle: 'text-primary', text: 'Edit', textStyle: 'font-semibold' },
+      listItemDeleteButtonStyles: { icon: <Trash2 />, iconStyle: 'text-destructive', text: 'Remove', textStyle: 'font-semibold' },
     },
   }}
 />

@@ -379,9 +379,9 @@ export function SessionManager({
               ) : (
                 <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
                   {renderStyledIcon(
-                    listStyle?.listItemIconStyles?.Icon,
+                    listStyle?.listItemIconStyles?.icon,
                     <MessageSquare size={16} className="shrink-0 text-muted-foreground" />,
-                    listStyle?.listItemIconStyles?.IconStyle,
+                    listStyle?.listItemIconStyles?.iconStyle,
                   )}
                   <div className="min-w-0 flex-1">
                     <span className={cn("block truncate text-sm", typeof listStyle?.textStyle === 'string' ? listStyle.textStyle : "")} style={typeof listStyle?.textStyle === 'object' ? listStyle.textStyle : undefined}>{s.title}</span>
@@ -405,9 +405,9 @@ export function SessionManager({
                 onClick={() => void handlePinToggle(s.id, Boolean(s.metadata?.isPinned))}
               >
                   {renderStyledIcon(
-                    listStyle?.listItemPinButtonStyles?.Icon,
+                    listStyle?.listItemPinButtonStyles?.icon,
                     s.metadata?.isPinned ? <PinOff size={14} /> : <Pin size={14} />,
-                    listStyle?.listItemPinButtonStyles?.IconStyles,
+                    listStyle?.listItemPinButtonStyles?.iconStyles,
                   )}
                 </Button>
                 <DropdownMenu onOpenChange={(open) => setOpenSessionMenuId(open ? s.id : null)}>
@@ -421,9 +421,9 @@ export function SessionManager({
                         aria-label="Conversation actions"
                       >
                         {renderStyledIcon(
-                          listStyle?.listItemMenuButtonStyles?.Icon,
+                          listStyle?.listItemMenuButtonStyles?.icon,
                           <MoreHorizontal size={16} />,
-                          listStyle?.listItemMenuButtonStyles?.IconStyle,
+                          listStyle?.listItemMenuButtonStyles?.iconStyle,
                         )}
                       </Button>
                     }
@@ -435,22 +435,26 @@ export function SessionManager({
                   >
                     <DropdownMenuGroup>
                       <DropdownMenuItem
-                        className="gap-1.5 rounded-xl px-2 py-1.5 text-xs"
+                        className={cn(
+                          "gap-1.5 rounded-xl px-2 py-1.5 text-xs",
+                          styleClassName(listStyle?.listItemRenameButtonStyles?.containerStyle),
+                        )}
+                        style={styleObject(listStyle?.listItemRenameButtonStyles?.containerStyle)}
                         onClick={() => {
                           setEditingSessionId(s.id);
                           setSessionTitle(s.title);
                         }}
                       >
                         {renderStyledIcon(
-                          listStyle?.listItemRenameButtonStyles?.Icon,
+                          listStyle?.listItemRenameButtonStyles?.icon,
                           <Pencil />,
-                          listStyle?.listItemRenameButtonStyles?.IconStyle,
+                          listStyle?.listItemRenameButtonStyles?.iconStyle,
                         )}
                         <span
-                          className={styleClassName(listStyle?.listItemRenameButtonStyles?.TextStyle)}
-                          style={styleObject(listStyle?.listItemRenameButtonStyles?.TextStyle)}
+                          className={styleClassName(listStyle?.listItemRenameButtonStyles?.textStyle)}
+                          style={styleObject(listStyle?.listItemRenameButtonStyles?.textStyle)}
                         >
-                          {listStyle?.listItemRenameButtonStyles?.Text ?? 'Rename'}
+                          {listStyle?.listItemRenameButtonStyles?.text ?? 'Rename'}
                         </span>
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
@@ -460,22 +464,21 @@ export function SessionManager({
                         variant="destructive"
                         className={cn(
                           "gap-1.5 rounded-xl px-2 py-1.5 text-xs",
-                          styleClassName(listStyle?.deleteButtonStyle),
+                          styleClassName(listStyle?.listItemDeleteButtonStyles?.containerStyle),
                         )}
-                        style={styleObject(listStyle?.deleteButtonStyle)}
+                        style={styleObject(listStyle?.listItemDeleteButtonStyles?.containerStyle)}
                         onClick={() => setDeletingSessionId(s.id)}
                       >
                         {renderStyledIcon(
-                          listStyle?.listItemDeleteButtonStyles?.Icon,
+                          listStyle?.listItemDeleteButtonStyles?.icon,
                           <Trash2 />,
-                          listStyle?.deleteIconStyle,
-                          listStyle?.listItemDeleteButtonStyles?.IconStyle,
+                          listStyle?.listItemDeleteButtonStyles?.iconStyle,
                         )}
                         <span
-                          className={styleClassName(listStyle?.listItemDeleteButtonStyles?.TextStyle)}
-                          style={styleObject(listStyle?.listItemDeleteButtonStyles?.TextStyle)}
+                          className={styleClassName(listStyle?.listItemDeleteButtonStyles?.textStyle)}
+                          style={styleObject(listStyle?.listItemDeleteButtonStyles?.textStyle)}
                         >
-                          {listStyle?.listItemDeleteButtonStyles?.Text ?? 'Delete'}
+                          {listStyle?.listItemDeleteButtonStyles?.text ?? 'Delete'}
                         </span>
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
