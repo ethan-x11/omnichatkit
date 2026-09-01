@@ -19,7 +19,7 @@ export type MarkdownRendererProps = {
 
 export function MarkdownRenderer({ text, linkedCitations, className }: MarkdownRendererProps) {
   return (
-    <div className={`prose prose-sm dark:prose-invert max-w-none ${className || ''}`}>
+    <div className={`prose prose-sm dark:prose-invert max-w-none break-all whitespace-pre-wrap ${className || ''}`}>
       <Markdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeRaw, rehypeKatex]}

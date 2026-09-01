@@ -7,6 +7,7 @@ import { ChatManagerProps } from '../types';
 import { A2UICanvas } from './A2UICanvas';
 import { ScrollArea } from './ui/scroll-area';
 import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from './ui/sheet';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from './ui/dialog';
@@ -59,7 +60,7 @@ export function ChatManager({
   collapsible = false,
   isResizable = false,
   collapseToggleButtonPosition = 'bottom-right',
-  toggleButtonStyle,
+  toggleButtonProps,
   defaultOpen = false,
   autoScroll = true,
   inputProps = {},
@@ -68,7 +69,8 @@ export function ChatManager({
   agentId,
   sessionId,
   a2uiPosition = 'left',
-  collapsibleA2UI = false
+  collapsibleA2UI = false,
+  maxInputCharacter
 }: ChatManagerProps) {
   const {
     messageStyle = {},
@@ -444,9 +446,9 @@ export function ChatManager({
               }
 
               return (
-                <div key={msg.id} className={cn("mb-4 group relative", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
+                <div key={msg.id} className={cn("mb-4 group relative w-full", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
                   {(mainContent || thinkingContent || (!thinkingContent && !hasTool)) && (
-                    <div className="font-bold mb-2 flex items-center gap-2">
+                    <div className="font-bold mb-2 flex items-center gap-2 min-w-0 max-w-full">
                       {isUser ? (
                         renderBadge('You', userBadgeStyle, "flex items-center gap-1", "", <User size={14} />)
                       ) : (
@@ -479,9 +481,9 @@ export function ChatManager({
                   )}
                   
                   {(mainContent || (!thinkingContent && !hasTool)) ? (
-                    <div className="mt-1 flex flex-col relative">
+                    <div className="mt-1 flex flex-col relative min-w-0 max-w-full">
                       <div 
-                        className={cn("relative z-10", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass)} 
+                        className={cn("relative z-10 break-all whitespace-pre-wrap min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass)} 
                         style={{
                           ...bubbleStyleObj,
                           ...(alignment === 'right' ? { borderBottomRightRadius: '4px' } : {}),
@@ -605,14 +607,23 @@ export function ChatManager({
             style={{...(typeof inputSectionStyle.containerStyle === 'object' ? inputSectionStyle.containerStyle : {}), ...(typeof inputSectionStyle.backgroundStyle === 'object' ? inputSectionStyle.backgroundStyle : {})}}
           >
             <div className="flex gap-2 w-full">
-              <Input 
+              <Textarea 
                 value={input} 
                 onChange={handleInputChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (input.trim()) {
+                      e.currentTarget.form?.requestSubmit();
+                    }
+                  }
+                }}
                 placeholder={labels.placeholder || "Type a message..."} 
                 className={cn("flex-1 bg-foreground/5 border-transparent shadow-sm focus-visible:bg-transparent", typeof inputSectionStyle.inputStyle === 'string' ? inputSectionStyle.inputStyle : "")} 
                 style={typeof inputSectionStyle.inputStyle === 'object' ? inputSectionStyle.inputStyle : undefined}
                 suppressHydrationWarning={true}
-                {...inputProps}
+                maxLength={maxInputCharacter}
+                {...inputProps as any}
               />
               {isLoading ? (
                 <Button 
@@ -692,20 +703,45 @@ export function ChatManager({
     </Sheet>
   ) : null;
 
+  const { toggleButtonStyle, toggleButtonIconProps, toggleButtonLabelProps } = toggleButtonProps || {};
+  const hasToggleLabel = !!toggleButtonLabelProps?.toggleButtonLabel;
+
+  const renderToggleButton = (isHidden: boolean = false) => (
+    <Button 
+      variant="default" 
+      size={hasToggleLabel ? "default" : "icon"} 
+      className={cn(
+        "fixed shadow-lg z-50", 
+        hasToggleLabel ? "rounded-full px-4 h-14" : "h-14 w-14 rounded-full", 
+        isHidden ? "hidden" : "", 
+        typeof toggleButtonStyle === 'string' ? toggleButtonStyle : ""
+      )}
+      style={typeof toggleButtonStyle === 'object' ? { ...getTogglePositionStyle(collapseToggleButtonPosition), ...toggleButtonStyle } : getTogglePositionStyle(collapseToggleButtonPosition)}
+      onClick={isHidden ? undefined : () => setIsOpen(true)}
+      suppressHydrationWarning={true}
+    >
+      <div className="flex items-center gap-2">
+        {toggleButtonIconProps?.toggleButtonIcon ? (
+          <span className={cn(typeof toggleButtonIconProps.toggleButtonIconStyle === 'string' ? toggleButtonIconProps.toggleButtonIconStyle : "")} style={typeof toggleButtonIconProps.toggleButtonIconStyle === 'object' ? toggleButtonIconProps.toggleButtonIconStyle : undefined}>
+            {toggleButtonIconProps.toggleButtonIcon}
+          </span>
+        ) : (
+          <MessageCircle size={hasToggleLabel ? 24 : 28} className={cn(typeof toggleButtonIconProps?.toggleButtonIconStyle === 'string' ? toggleButtonIconProps.toggleButtonIconStyle : "")} style={typeof toggleButtonIconProps?.toggleButtonIconStyle === 'object' ? toggleButtonIconProps.toggleButtonIconStyle : undefined} />
+        )}
+        {toggleButtonLabelProps?.toggleButtonLabel && (
+          <span className={cn("text-base font-medium", typeof toggleButtonLabelProps.toggleButtonLabelStyle === 'string' ? toggleButtonLabelProps.toggleButtonLabelStyle : "")} style={typeof toggleButtonLabelProps.toggleButtonLabelStyle === 'object' ? toggleButtonLabelProps.toggleButtonLabelStyle : undefined}>
+            {toggleButtonLabelProps.toggleButtonLabel}
+          </span>
+        )}
+      </div>
+    </Button>
+  );
+
   if (isEmbedded || (!isSheet && !isFloating)) {
     if (isEmbeddedCollapsible && !isOpen) {
       return (
         <>
-          <Button 
-            variant="default" 
-            size="icon" 
-            className={cn("fixed h-14 w-14 rounded-full shadow-lg z-50", typeof toggleButtonStyle === 'string' ? toggleButtonStyle : "")}
-            style={typeof toggleButtonStyle === 'object' ? { ...getTogglePositionStyle(collapseToggleButtonPosition), ...toggleButtonStyle } : getTogglePositionStyle(collapseToggleButtonPosition)}
-            onClick={() => setIsOpen(true)}
-            suppressHydrationWarning={true}
-          >
-            <MessageCircle size={28} />
-          </Button>
+          {renderToggleButton()}
           {a2uiSheetContent}
         </>
       );
@@ -718,6 +754,7 @@ export function ChatManager({
       </>
     );
   }
+
 
   const getFloatingDialogStyle = (pos?: string): React.CSSProperties => {
     // Neutralize Tailwind's center translations so we can anchor to the corners
@@ -745,11 +782,7 @@ export function ChatManager({
       <>
         <Dialog open={isOpen} onOpenChange={setIsOpen} modal={false} disablePointerDismissal={true}>
           <DialogTrigger 
-            render={
-              <Button variant="default" size="icon" className={cn("fixed h-14 w-14 rounded-full shadow-lg z-50", isOpen ? "hidden" : "", typeof toggleButtonStyle === 'string' ? toggleButtonStyle : "")} style={typeof toggleButtonStyle === 'object' ? { ...getTogglePositionStyle(collapseToggleButtonPosition), ...toggleButtonStyle } : getTogglePositionStyle(collapseToggleButtonPosition)} suppressHydrationWarning={true}>
-                <MessageCircle size={28} />
-              </Button>
-            }
+            render={renderToggleButton(isOpen)}
           />
           <DialogContent 
             className="flex flex-col overflow-hidden max-w-[90vw] md:max-w-[800px] w-full h-[85vh] p-0 border-none bg-transparent shadow-none" 
@@ -769,11 +802,7 @@ export function ChatManager({
     <>
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger 
-          render={
-            <Button variant="default" size="icon" className={cn("fixed h-14 w-14 rounded-full shadow-lg z-50", isOpen ? "hidden" : "", typeof toggleButtonStyle === 'string' ? toggleButtonStyle : "")} style={typeof toggleButtonStyle === 'object' ? { ...getTogglePositionStyle(collapseToggleButtonPosition), ...toggleButtonStyle } : getTogglePositionStyle(collapseToggleButtonPosition)} suppressHydrationWarning={true}>
-              <MessageCircle size={28} />
-            </Button>
-          }
+          render={renderToggleButton(isOpen)}
         />
         <SheetContent side={position} showCloseButton={false} className="w-[400px] sm:w-[500px] md:w-[600px] flex flex-col p-4 bg-transparent border-none shadow-none">
           {innerContent}

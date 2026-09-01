@@ -109,7 +109,17 @@ export type ChatManagerBaseProps = {
   chatManagerComponentStyles?: ChatManagerComponentStyles;
   position?: ComponentPosition;
   collapseToggleButtonPosition?: ToggleButtonPosition;
-  toggleButtonStyle?: React.CSSProperties | string;
+  toggleButtonProps?: {
+    toggleButtonStyle?: React.CSSProperties | string;
+    toggleButtonIconProps?: {
+      toggleButtonIcon?: React.ReactNode;
+      toggleButtonIconStyle?: React.CSSProperties | string;
+    };
+    toggleButtonLabelProps?: {
+      toggleButtonLabel?: string | React.ReactNode;
+      toggleButtonLabelStyle?: React.CSSProperties | string;
+    };
+  };
   defaultOpen?: boolean;
   autoScroll?: boolean;
   inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
@@ -119,6 +129,7 @@ export type ChatManagerBaseProps = {
   sessionId?: string;
   a2uiPosition?: ComponentPosition; // Used when layout is 'split'
   collapsibleA2UI?: boolean; // Used when layout is 'split'
+  maxInputCharacter?: number;
 };
 
 export type ChatManagerProps = ChatManagerBaseProps & (

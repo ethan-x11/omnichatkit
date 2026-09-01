@@ -134,7 +134,11 @@ The `ChatManager` component comes with extensive styling and layout capabilities
 - **`collapsible`** (`boolean`): Renders the component as a floating drawer (`<Sheet>`) with a dynamic toggle button.
 - **`position`** (`"left" | "right" | "top" | "bottom"`): Controls where the drawer docks and automatically aligns the close button correctly.
 - **`welcomeScreen`** (`boolean | ReactNode`): Set to `true` (default) to show the default welcome screen, or pass a custom React element.
-
+- **`maxInputCharacter`** (`number`): Optional limit for the maximum number of characters allowed in the chat input box.
+- **`toggleButtonProps`** (`object`): Deep customization for the collapse/expand trigger button (replaces old `toggleButtonStyle`).
+  - `toggleButtonStyle`: Overall button container styles.
+  - `toggleButtonIconProps`: Nested object for `{ toggleButtonIcon, toggleButtonIconStyle }`. By default, renders a `MessageCircle` icon.
+  - `toggleButtonLabelProps`: Nested object for `{ toggleButtonLabel, toggleButtonLabelStyle }` to add text alongside the icon.
 #### Component Styling (`chatManagerComponentStyles`)
 You can deeply customize the appearance of the ChatManager by passing nested style objects. We support `backgroundStyle` for all major layout sections, as well as advanced message and badge styling:
 
