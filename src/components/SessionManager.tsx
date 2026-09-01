@@ -327,8 +327,8 @@ export function SessionManager({
           {sessions.map(s => (
             <div 
               key={s.id} 
-              className={cn(`group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors hover:bg-muted ${activeSessionId === s.id ? 'bg-muted font-medium' : ''}`, typeof listStyle?.itemStyle === 'string' ? listStyle.itemStyle : "")}
-              style={typeof listStyle?.itemStyle === 'object' ? listStyle.itemStyle : undefined}
+              className={cn(`group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors hover:bg-muted ${activeSessionId === s.id ? 'bg-muted font-medium' : ''}`, typeof listStyle?.containerStyle === 'string' ? listStyle.containerStyle : "")}
+              style={typeof listStyle?.containerStyle === 'object' ? listStyle.containerStyle : undefined}
               onClick={() => handleSessionSelect(s.id)}
               onMouseEnter={() => showSessionActions(s.id)}
               onMouseLeave={() => hideSessionActions(s.id)}

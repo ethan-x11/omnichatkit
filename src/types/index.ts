@@ -166,7 +166,7 @@ export type ChatManagerProps = ChatManagerBaseProps & (
 );
 
 export interface SessionListStyles {
-  itemStyle?: React.CSSProperties | string;
+  containerStyle?: React.CSSProperties | string;
   textStyle?: React.CSSProperties | string;
   timeStyle?: React.CSSProperties | string;
   listItemIconStyles?: {
