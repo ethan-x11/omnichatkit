@@ -45,6 +45,17 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
       abortControllerRef.current.abort();
     }
     setStatus('ready');
+    setMessages((prev) => {
+      const lastMsg = prev[prev.length - 1];
+      if (lastMsg && lastMsg.role === 'system' && lastMsg.content === 'Response Stopped') {
+        return prev;
+      }
+      return [...prev, {
+        id: Date.now().toString(),
+        role: 'system',
+        content: 'Response Stopped'
+      }];
+    });
   }, []);
 
   const append = useCallback(async (message: any, chatRequestOptions?: any) => {
@@ -58,6 +69,8 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
     // Optimistic UI
     setMessages((prev) => [...prev, newMessage]);
     setStatus('submitted');
+    setError(undefined);
+    setEvents([]);
     
     try {
       const aguiMessages = [...messages, newMessage].map(m => ({
@@ -143,8 +156,21 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
       setStatus('ready');
       return '';
     } catch (err) {
-      setError(err instanceof Error ? err : new Error(String(err)));
-      setStatus('error');
+      const isAborted = String(err).toLowerCase().includes('aborted') || (err instanceof Error && err.name === 'AbortError');
+      if (isAborted) {
+        setMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg && lastMsg.role === 'system' && lastMsg.content === 'Response Stopped') return prev;
+          return [...prev, {
+            id: Date.now().toString(),
+            role: 'system',
+            content: 'Response Stopped'
+          }];
+        });
+      } else {
+        setError(err instanceof Error ? err : new Error(String(err)));
+        setStatus('error');
+      }
       return '';
     }
   }, [messages]);

@@ -135,6 +135,7 @@ The `ChatManager` component comes with extensive styling and layout capabilities
 - **`position`** (`"left" | "right" | "top" | "bottom"`): Controls where the drawer docks and automatically aligns the close button correctly.
 - **`welcomeScreen`** (`boolean | ReactNode`): Set to `true` (default) to show the default welcome screen, or pass a custom React element.
 - **`maxInputCharacter`** (`number`): Optional limit for the maximum number of characters allowed in the chat input box.
+- **`promptChips`** (`PromptChips`): Render actionable chips above the input box (e.g., for suggested questions or starter prompts). Includes a `promptChipList` (title, hoverText, prompt) and an `alwaysShow` boolean flag.
 - **`toggleButtonProps`** (`object`): Deep customization for the collapse/expand trigger button (replaces old `toggleButtonStyle`).
   - `toggleButtonStyle`: Overall button container styles.
   - `toggleButtonIconProps`: Nested object for `{ toggleButtonIcon, toggleButtonIconStyle }`. By default, renders a `MessageCircle` icon.
@@ -178,7 +179,14 @@ import { User, Bot } from 'lucide-react';
       assistantMessageStyle: {
         alignment: "left", // Defaults to left, but can be overridden to center or right
         bubbleStyle: "bg-slate-800 text-slate-200 shadow-sm rounded-2xl px-4 py-3"
-      }
+      },
+      stopResponseStyle: "text-slate-400" // Styles the Response Stopped divider
+    },
+    // Customize suggested prompt chips
+    promptChipStyles: {
+      promptChipContainerStyle: "pt-4 gap-2 border-t-slate-800",
+      promptChipTitleStyle: "bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-full border border-slate-700",
+      promptChipHoverTextStyle: "transition-colors"
     },
     inputSectionStyle: {
       backgroundStyle: "bg-slate-950",

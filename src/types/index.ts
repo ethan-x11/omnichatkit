@@ -83,6 +83,7 @@ export interface MessageStyles {
   assistantMessageStyle?: React.CSSProperties | string | AssistantMessageContentStyles;
   userMessageStyle?: React.CSSProperties | string | MessageContentStyles;
   thinkingStepStyle?: React.CSSProperties | string;
+  stopResponseStyle?: React.CSSProperties | string;
   backgroundStyle?: React.CSSProperties | string;
 }
 
@@ -99,10 +100,28 @@ export interface BadgeStyles {
   icon?: ReactNode;
 }
 
+export interface PromptChip {
+  title: string | ReactNode;
+  hoverText?: string;
+  prompt: string;
+}
+
+export interface PromptChips {
+  promptChipList: PromptChip[];
+  alwaysShow?: boolean;
+}
+
+export interface PromptChipStyles {
+  promptChipContainerStyle?: React.CSSProperties | string;
+  promptChipTitleStyle?: React.CSSProperties | string;
+  promptChipHoverTextStyle?: React.CSSProperties | string;
+}
+
 export interface ChatManagerComponentStyles {
   messageStyle?: MessageStyles;
   inputSectionStyle?: InputStyles;
   headerStyle?: HeaderStyles;
+  promptChipStyles?: PromptChipStyles;
   backgroundStyle?: React.CSSProperties | string;
 }
 
@@ -130,6 +149,7 @@ export type ChatManagerBaseProps = {
   inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
   welcomeScreen?: SlotValue<React.FC<WelcomeScreenProps>> | boolean;
   labels?: Partial<ChatLabels>;
+  promptChips?: PromptChips;
   agentId?: string;
   sessionId?: string;
   a2uiPosition?: ComponentPosition; // Used when layout is 'split'

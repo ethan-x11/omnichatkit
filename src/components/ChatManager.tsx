@@ -66,6 +66,7 @@ export function ChatManager({
   inputProps = {},
   welcomeScreen = true,
   labels = {},
+  promptChips,
   agentId,
   sessionId,
   a2uiPosition = 'left',
@@ -201,6 +202,24 @@ export function ChatManager({
       setActiveSessionId(newSession.id);
     }
     handleSubmit(e);
+  };
+  
+  const handleChipClick = (prompt: string) => {
+    if (!activeSessionId && prompt.trim()) {
+      const newSession = {
+        id: Date.now().toString(),
+        title: prompt.slice(0, 30) || 'New Session',
+        model: 'default',
+        metadata: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      addSession(newSession);
+      setActiveSessionId(newSession.id);
+    }
+    if (context?.append) {
+      context.append({ role: 'user', content: prompt });
+    }
   };
   
   const getTogglePositionStyle = (pos?: string): React.CSSProperties => {
@@ -383,6 +402,33 @@ export function ChatManager({
                 );
               }
 
+              if ((msg.role as string) === 'system') {
+                if (msg.content === 'Response Stopped') {
+                  return (
+                    <div
+                      key={msg.id}
+                      className={cn(
+                        "mb-4 flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400",
+                        typeof messageStyle.stopResponseStyle === 'string' ? messageStyle.stopResponseStyle : ""
+                      )}
+                      style={typeof messageStyle.stopResponseStyle === 'object' ? messageStyle.stopResponseStyle : undefined}
+                    >
+                      <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+                      <span className="shrink-0 font-medium">Response Stopped</span>
+                      <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div key={msg.id} className="mb-4 bg-zinc-100 dark:bg-zinc-900/50 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-zinc-600 dark:text-zinc-400">
+                      {msg.content}
+                    </div>
+                  </div>
+                );
+              }
+
               const isUser = msg.role === 'user';
               const customStyleRaw = isUser ? messageStyle.userMessageStyle : messageStyle.assistantMessageStyle;
               
@@ -486,7 +532,7 @@ export function ChatManager({
                   {(mainContent || (!thinkingContent && !hasTool)) ? (
                     <div className="mt-1 flex flex-col relative min-w-0 max-w-full">
                       <div 
-                        className={cn("relative z-10 break-all min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass)} 
+                        className={cn("relative z-10 break-words min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass)} 
                         style={{
                           ...bubbleStyleObj,
                           ...(alignment === 'right' ? { borderBottomRightRadius: '4px' } : {}),
@@ -573,7 +619,11 @@ export function ChatManager({
             
             {(() => {
               // Extract active lifecycle events
-              const runError = events.find((e: any) => e.type === 'RUN_ERROR' || e.type === 'RunError');
+              const runError = events.find((e: any) => {
+                if (e.type !== 'RUN_ERROR' && e.type !== 'RunError') return false;
+                const msg = String(e.message).toLowerCase();
+                return !msg.includes('aborted') && !msg.includes('abort');
+              });
               if (runError) {
                 return (
                   <div className="mb-4 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 text-sm border border-red-200 dark:border-red-900">
@@ -607,9 +657,36 @@ export function ChatManager({
             <div ref={messagesEndRef} />
           </div>
           
+          {promptChips?.promptChipList && promptChips.promptChipList.length > 0 && (promptChips.alwaysShow || messages.length === 0) && (
+            <div 
+              className={cn("px-4 pb-2 pt-3 flex flex-wrap gap-2 shrink-0 border-t border-inherit", typeof chatManagerComponentStyles?.promptChipStyles?.promptChipContainerStyle === 'string' ? chatManagerComponentStyles.promptChipStyles.promptChipContainerStyle : "")}
+              style={typeof chatManagerComponentStyles?.promptChipStyles?.promptChipContainerStyle === 'object' ? chatManagerComponentStyles.promptChipStyles.promptChipContainerStyle : undefined}
+            >
+              {promptChips.promptChipList.map((chip, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  title={chip.hoverText}
+                  onClick={() => handleChipClick(chip.prompt)}
+                  className={cn(
+                    "text-xs bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-3 py-1.5 transition-colors flex flex-col items-start text-left",
+                    typeof chatManagerComponentStyles?.promptChipStyles?.promptChipHoverTextStyle === 'string' ? chatManagerComponentStyles.promptChipStyles.promptChipHoverTextStyle : ""
+                  )}
+                  style={typeof chatManagerComponentStyles?.promptChipStyles?.promptChipHoverTextStyle === 'object' ? chatManagerComponentStyles.promptChipStyles.promptChipHoverTextStyle : undefined}
+                >
+                  <span className={cn("font-medium", typeof chatManagerComponentStyles?.promptChipStyles?.promptChipTitleStyle === 'string' ? chatManagerComponentStyles.promptChipStyles.promptChipTitleStyle : "")}
+                    style={typeof chatManagerComponentStyles?.promptChipStyles?.promptChipTitleStyle === 'object' ? chatManagerComponentStyles.promptChipStyles.promptChipTitleStyle : undefined}
+                  >
+                    {chip.title}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
           <form 
             onSubmit={handleFormSubmit} 
-            className={cn("p-4 border-t border-inherit flex flex-col gap-2 shrink-0", typeof inputSectionStyle.containerStyle === 'string' ? inputSectionStyle.containerStyle : "", typeof inputSectionStyle.backgroundStyle === 'string' ? inputSectionStyle.backgroundStyle : "")} 
+            className={cn("p-4 flex flex-col gap-2 shrink-0", typeof inputSectionStyle.containerStyle === 'string' ? inputSectionStyle.containerStyle : "", typeof inputSectionStyle.backgroundStyle === 'string' ? inputSectionStyle.backgroundStyle : "", (!promptChips?.promptChipList || promptChips.promptChipList.length === 0 || (!promptChips.alwaysShow && messages.length > 0)) ? "border-t border-inherit" : "")} 
             style={{...(typeof inputSectionStyle.containerStyle === 'object' ? inputSectionStyle.containerStyle : {}), ...(typeof inputSectionStyle.backgroundStyle === 'object' ? inputSectionStyle.backgroundStyle : {})}}
           >
             <div className="flex gap-2 w-full">
