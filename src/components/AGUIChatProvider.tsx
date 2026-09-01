@@ -2,15 +2,18 @@ import React, { createContext, useContext, useEffect } from 'react';
 import { useAGUIChat } from '../hooks/useAGUIChat';
 import { AIChatProviderProps } from '../types';
 import { useAIChatStore } from '../store/useAIChatStore';
-import { UseChatHelpers } from './AIChatProvider';
+import type { ChatContextHelpers } from './AIChatProvider';
+import { createSessionTitlePrompt, normalizeSessionTitle } from '../lib/session-title';
+import type { SessionTitleMessage } from '../lib/session-title';
 
-export const AGUIChatContext = createContext<UseChatHelpers | null>(null);
+export const AGUIChatContext = createContext<ChatContextHelpers | null>(null);
 
-export function AGUIChatProvider({ children, theme = 'standard', apiEndpoint = '/api/agent', agentId, sessionId, sessionStorageMode, sessionRoute = '/session' }: AIChatProviderProps) {
+export function AGUIChatProvider({ children, theme = 'standard', apiEndpoint = '/api/agent', agentId, sessionId, sessionStorageMode = 'disabled', sessionRoute = '/session' }: AIChatProviderProps) {
   const setTheme = useAIChatStore((state) => state.setTheme);
   const setSessionStorageMode = useAIChatStore((state) => state.setSessionStorageMode);
   const setSessionRoute = useAIChatStore((state) => state.setSessionRoute);
-  const setSessions = useAIChatStore((state) => state.setSessions);
+  const loadSessions = useAIChatStore((state) => state.loadSessions);
+  const ensureSession = useAIChatStore((state) => state.ensureSession);
 
   // Initialize store with props
   useEffect(() => {
@@ -22,35 +25,72 @@ export function AGUIChatProvider({ children, theme = 'standard', apiEndpoint = '
   // Fetch initial sessions if API mode
   useEffect(() => {
     if (sessionStorageMode === 'api' && sessionRoute) {
-      fetch(sessionRoute)
-        .then(res => {
-          if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
-          }
-          const contentType = res.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            return res.json();
-          }
-          throw new Error("Expected JSON response");
-        })
-        .then(data => {
-          if (Array.isArray(data)) setSessions(data);
-        })
-        .catch(err => console.error('Failed to load sessions:', err));
+      loadSessions().catch((error) => console.error('Failed to load sessions:', error));
     }
-  }, [sessionStorageMode, sessionRoute, setSessions]);
+  }, [sessionStorageMode, sessionRoute, loadSessions]);
 
   const activeSessionId = useAIChatStore((state) => state.activeSessionId);
+  const sessionsEnabled = sessionStorageMode !== 'disabled';
 
   // Initialize AG-UI chat via custom hook
   const chatHelpers = useAGUIChat({
     api: apiEndpoint,
-    body: activeSessionId ? { sessionId: activeSessionId } : (sessionId ? { sessionId } : undefined),
+    body: sessionsEnabled ? (activeSessionId ? { sessionId: activeSessionId } : (sessionId ? { sessionId } : undefined)) : undefined,
     agentId
   });
+  const [isGeneratingSessionTitle, setIsGeneratingSessionTitle] = React.useState(false);
+  const titleChatHelpers = useAGUIChat({
+    api: apiEndpoint,
+    agentId,
+  });
+
+  const sessionAwareAppend = React.useCallback(async (message: any, requestOptions?: any) => {
+    if (!sessionsEnabled) {
+      return chatHelpers.append(message, requestOptions);
+    }
+
+    const requestedSessionId = requestOptions?.body?.sessionId ?? sessionId;
+    const firstMessage = typeof message.content === 'string' ? message.content : 'New Session';
+    const resolvedSessionId = await ensureSession(firstMessage, requestedSessionId);
+
+    return chatHelpers.append(message, {
+      ...requestOptions,
+      body: { ...requestOptions?.body, ...(resolvedSessionId ? { sessionId: resolvedSessionId } : {}) },
+    });
+  }, [chatHelpers.append, ensureSession, sessionId, sessionsEnabled]);
+
+  const generateSessionTitle = React.useCallback(async (messages: SessionTitleMessage[]) => {
+    if (!sessionsEnabled) {
+      throw new Error('Session titles require sessionStorageMode to be "memory" or "api".');
+    }
+
+    titleChatHelpers.setMessages([]);
+    setIsGeneratingSessionTitle(true);
+
+    try {
+      const response = await titleChatHelpers.append({
+        role: 'user',
+        content: createSessionTitlePrompt(messages),
+      });
+      const title = normalizeSessionTitle(response || titleChatHelpers.messages.at(-1)?.content);
+      if (!title) throw new Error('The agent returned an empty session title.');
+      return title;
+    } finally {
+      titleChatHelpers.setMessages([]);
+      setIsGeneratingSessionTitle(false);
+    }
+  }, [sessionsEnabled, titleChatHelpers.append, titleChatHelpers.messages, titleChatHelpers.setMessages]);
+
+  const chatContextValue = React.useMemo(() => ({
+    ...chatHelpers,
+    append: sessionAwareAppend,
+    generateSessionTitle,
+    isGeneratingSessionTitle,
+    sessionStorageMode,
+  }), [chatHelpers, generateSessionTitle, isGeneratingSessionTitle, sessionAwareAppend, sessionStorageMode]);
 
   return (
-    <AGUIChatContext.Provider value={chatHelpers}>
+    <AGUIChatContext.Provider value={chatContextValue}>
       {children}
     </AGUIChatContext.Provider>
   );

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { A2UICatalog, ChatTheme } from '../types';
+import { A2UICatalog, ChatTheme, StorageMode } from '../types';
 
 export type Role = 'system' | 'user' | 'assistant' | 'tool';
 export type HITLStatus = 'none' | 'pending' | 'approved' | 'rejected';
@@ -65,17 +65,106 @@ export interface ChatMessage {
   createdAt: Date | string;
 }
 
+export type SessionUpdate = Partial<Omit<ChatSession, 'id' | 'createdAt' | 'metadata'>> & {
+  metadata?: Partial<ISessionMetadata>;
+};
+
+const sessionWriteQueues = new Map<string, Promise<unknown>>();
+let pendingSessionCreation: Promise<ChatSession> | null = null;
+
+const enqueueSessionWrite = <T,>(id: string, write: () => Promise<T>): Promise<T> => {
+  const previous = sessionWriteQueues.get(id) ?? Promise.resolve();
+  const next = previous.catch(() => undefined).then(write);
+  const queued = next.then(() => undefined, () => undefined);
+
+  sessionWriteQueues.set(id, queued);
+  void queued.finally(() => {
+    if (sessionWriteQueues.get(id) === queued) {
+      sessionWriteQueues.delete(id);
+    }
+  });
+
+  return next;
+};
+
+const sortSessions = (sessions: ChatSession[]) => [...sessions].sort((first, second) => {
+  const pinOrder = Number(Boolean(second.metadata?.isPinned)) - Number(Boolean(first.metadata?.isPinned));
+  if (pinOrder !== 0) return pinOrder;
+
+  return new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime();
+});
+
+const upsertSession = (sessions: ChatSession[], session: ChatSession) => {
+  const existingIndex = sessions.findIndex((candidate) => candidate.id === session.id);
+  const nextSessions = existingIndex === -1
+    ? [session, ...sessions]
+    : sessions.map((candidate) => candidate.id === session.id ? session : candidate);
+
+  return sortSessions(nextSessions);
+};
+
+const parseJsonResponse = async <T,>(response: Response): Promise<T | undefined> => {
+  if (!response.ok) {
+    throw new Error(`Session request failed: ${response.status} ${response.statusText}`);
+  }
+
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    return undefined;
+  }
+
+  const contentType = response.headers.get('content-type');
+  if (!contentType?.includes('application/json')) return undefined;
+
+  const body = await response.text();
+  return body ? JSON.parse(body) as T : undefined;
+};
+
+const toStoredMessages = (messages: any[], sessionId: string, a2uiToolName: string): ChatMessage[] => messages.map((message: any) => {
+  let componentPayload: A2UIPayload | undefined;
+  let toolCalls: ToolCall[] | undefined;
+
+  if (message.toolInvocations?.length > 0) {
+    toolCalls = message.toolInvocations.map((tool: any) => ({
+      id: tool.toolCallId,
+      type: 'function' as const,
+      function: {
+        name: tool.toolName,
+        arguments: typeof tool.args === 'string' ? tool.args : JSON.stringify(tool.args || {})
+      }
+    }));
+
+    const renderComponentTool = message.toolInvocations.find((tool: any) => tool.toolName === a2uiToolName);
+    if (renderComponentTool) {
+      componentPayload = {
+        name: renderComponentTool.args?.componentName || renderComponentTool.args?.name || renderComponentTool.toolName,
+        props: renderComponentTool.args?.props || renderComponentTool.args || {}
+      };
+    }
+  }
+
+  return {
+    id: message.id,
+    sessionId,
+    role: (message.role === 'function' || message.role === 'data') ? 'assistant' : message.role,
+    content: message.content || '',
+    componentPayload,
+    toolCalls,
+    hitlStatus: 'none',
+    createdAt: message.createdAt || new Date(),
+  } as ChatMessage;
+});
+
 interface AIChatState {
   catalog: A2UICatalog;
   theme: ChatTheme;
-  sessionStorageMode: 'memory' | 'api';
+  sessionStorageMode: StorageMode;
   sessionRoute: string;
   includeBasicCatalog: boolean;
   a2uiToolName: string;
   a2uiVersion: 'V0.8' | 'V0.9' | 'V0.9.1' | 'V1.0';
   setCatalog: (catalog: A2UICatalog) => void;
   setTheme: (theme: ChatTheme) => void;
-  setSessionStorageMode: (mode: 'memory' | 'api') => void;
+  setSessionStorageMode: (mode: StorageMode) => void;
   setSessionRoute: (endpoint: string) => void;
   setIncludeBasicCatalog: (include: boolean) => void;
   setA2uiToolName: (name: string) => void;
@@ -91,23 +180,33 @@ interface AIChatState {
   activeSessionId: string | null;
   setSessions: (sessions: ChatSession[]) => void;
   setActiveSessionId: (id: string | null) => void;
-  addSession: (session: ChatSession) => void;
-  removeSession: (id: string) => void;
-  updateSessionMessages: (id: string, messages: any[]) => void;
+  loadSessions: () => Promise<ChatSession[]>;
+  getSession: (id: string) => Promise<ChatSession | undefined>;
+  createSession: (session: ChatSession) => Promise<ChatSession>;
+  ensureSession: (firstMessage: string, fallbackSessionId?: string) => Promise<string | undefined>;
+  replaceSession: (id: string, session: ChatSession) => Promise<ChatSession | undefined>;
+  updateSession: (id: string, update: SessionUpdate) => Promise<ChatSession | undefined>;
+  renameSession: (id: string, title: string) => Promise<ChatSession | undefined>;
+  setSessionPinned: (id: string, isPinned: boolean) => Promise<ChatSession | undefined>;
+  removeSession: (id: string) => Promise<void>;
+  updateSessionMessages: (id: string, messages: any[]) => Promise<ChatSession | undefined>;
 }
 export const useAIChatStore = create<AIChatState>()(
   persist(
     (set, get) => ({
       catalog: {},
       theme: 'standard',
-      sessionStorageMode: 'memory',
+      sessionStorageMode: 'disabled',
       sessionRoute: '/session',
       includeBasicCatalog: false,
       a2uiToolName: 'renderComponent',
       a2uiVersion: 'V0.9', // Default version
       setCatalog: (catalog) => set({ catalog }),
       setTheme: (theme) => set({ theme }),
-      setSessionStorageMode: (mode) => set({ sessionStorageMode: mode }),
+      setSessionStorageMode: (mode) => set(mode === 'disabled'
+        ? { sessionStorageMode: mode, sessions: [], activeSessionId: null }
+        : { sessionStorageMode: mode }
+      ),
       setSessionRoute: (endpoint) => set({ sessionRoute: endpoint }),
       setIncludeBasicCatalog: (include) => set({ includeBasicCatalog: include }),
       setA2uiToolName: (name) => set({ a2uiToolName: name }),
@@ -121,81 +220,230 @@ export const useAIChatStore = create<AIChatState>()(
     
       sessions: [],
       activeSessionId: null,
-      setSessions: (sessions) => set({ sessions }),
-      setActiveSessionId: (activeSessionId) => set({ activeSessionId }),
-      addSession: (session) => set((state) => {
+      setSessions: (sessions) => {
+        if (get().sessionStorageMode === 'disabled') return;
+        set({ sessions: sortSessions(sessions) });
+      },
+      setActiveSessionId: (activeSessionId) => {
+        if (get().sessionStorageMode === 'disabled') return;
+        set({ activeSessionId });
+      },
+      loadSessions: async () => {
+        const state = get();
+        if (state.sessionStorageMode === 'disabled') return [];
+        if (state.sessionStorageMode !== 'api') return state.sessions;
+
+        const response = await fetch(state.sessionRoute);
+        const sessions = await parseJsonResponse<ChatSession[]>(response);
+        if (!Array.isArray(sessions)) {
+          throw new Error('Expected the session list endpoint to return a JSON array.');
+        }
+
+        if (get().sessionStorageMode !== 'disabled') {
+          set({ sessions: sortSessions(sessions) });
+        }
+        return sessions;
+      },
+      getSession: async (id) => {
+        const state = get();
+        if (state.sessionStorageMode === 'disabled') return undefined;
+        const localSession = state.sessions.find((session) => session.id === id);
+        if (state.sessionStorageMode !== 'api') return localSession;
+
+        const response = await fetch(`${state.sessionRoute}/${id}`);
+        if (response.status === 404) {
+          set((current) => ({
+            sessions: current.sessions.filter((session) => session.id !== id),
+            activeSessionId: current.activeSessionId === id ? null : current.activeSessionId,
+          }));
+          return undefined;
+        }
+        const session = await parseJsonResponse<ChatSession>(response);
+        if (!session) return localSession;
+
+        if (get().sessionStorageMode !== 'disabled') {
+          set((current) => ({ sessions: upsertSession(current.sessions, session) }));
+        }
+        return session;
+      },
+      createSession: async (session) => {
+        const state = get();
+        if (state.sessionStorageMode === 'disabled') {
+          throw new Error('Session operations are disabled. Set sessionStorageMode to "memory" or "api" to create sessions.');
+        }
+        const now = new Date();
+        const newSession: ChatSession = {
+          ...session,
+          metadata: session.metadata || {},
+          createdAt: session.createdAt || now,
+          updatedAt: session.updatedAt || now,
+        };
+
+        let savedSession = newSession;
         if (state.sessionStorageMode === 'api') {
-          fetch(state.sessionRoute, {
+          const response = await fetch(state.sessionRoute, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(session)
-          }).catch(console.error);
-        }
-        return { sessions: [session, ...state.sessions] };
-      }),
-      removeSession: (id) => set((state) => {
-        if (state.sessionStorageMode === 'api') {
-          fetch(`${state.sessionRoute}/${id}`, {
-            method: 'DELETE'
-          }).catch(console.error);
-        }
-        return { 
-          sessions: state.sessions.filter(s => s.id !== id),
-          activeSessionId: state.activeSessionId === id ? null : state.activeSessionId 
-        };
-      }),
-      updateSessionMessages: (id, messages) => set((state) => {
-        const mappedMessages: ChatMessage[] = messages.map((m: any) => {
-          let componentPayload: A2UIPayload | undefined = undefined;
-          let toolCalls: ToolCall[] | undefined = undefined;
-          
-          if (m.toolInvocations && m.toolInvocations.length > 0) {
-            toolCalls = m.toolInvocations.map((t: any) => ({
-              id: t.toolCallId,
-              type: 'function',
-              function: {
-                name: t.toolName,
-                arguments: typeof t.args === 'string' ? t.args : JSON.stringify(t.args || {})
-              }
-            }));
-            
-            const renderComponentTool = m.toolInvocations.find((t: any) => t.toolName === state.a2uiToolName);
-            if (renderComponentTool) {
-               componentPayload = {
-                 name: renderComponentTool.args?.componentName || renderComponentTool.args?.name || renderComponentTool.toolName,
-                 props: renderComponentTool.args?.props || renderComponentTool.args || {}
-               };
-            }
+            body: JSON.stringify(newSession),
+          });
+          const serverSession = await parseJsonResponse<ChatSession>(response);
+          if (serverSession) {
+            savedSession = {
+              ...newSession,
+              ...serverSession,
+              metadata: { ...newSession.metadata, ...serverSession.metadata },
+            };
           }
+        }
 
-          return {
-            id: m.id,
-            sessionId: id,
-            role: (m.role === 'function' || m.role === 'data') ? 'assistant' : m.role,
-            content: m.content || '',
-            componentPayload,
-            toolCalls,
-            hitlStatus: 'none', 
-            createdAt: m.createdAt || new Date(),
-          };
-        });
+        if (get().sessionStorageMode !== 'disabled') {
+          set((current) => ({ sessions: upsertSession(current.sessions, savedSession) }));
+        }
+        return savedSession;
+      },
+      ensureSession: async (firstMessage, fallbackSessionId) => {
+        if (get().sessionStorageMode === 'disabled') return undefined;
 
-        const updatedSessions = state.sessions.map(s => s.id === id ? { ...s, messages: mappedMessages } : s);
-        
-        // Also update API if needed
+        const currentSessionId = get().activeSessionId ?? fallbackSessionId;
+        if (currentSessionId) {
+          if (!get().activeSessionId) set({ activeSessionId: currentSessionId });
+          return currentSessionId;
+        }
+
+        if (!pendingSessionCreation) {
+          const now = new Date();
+          pendingSessionCreation = get().createSession({
+            id: typeof crypto !== 'undefined' && crypto.randomUUID
+              ? crypto.randomUUID()
+              : `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            title: firstMessage.slice(0, 30) || 'New Session',
+            model: 'default',
+            metadata: {},
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+
+        const creation = pendingSessionCreation;
+        try {
+          const session = await creation;
+          if (get().sessionStorageMode === 'disabled') return undefined;
+          set({ activeSessionId: session.id });
+          return session.id;
+        } finally {
+          if (pendingSessionCreation === creation) {
+            pendingSessionCreation = null;
+          }
+        }
+      },
+      replaceSession: async (id, session) => {
+        const state = get();
+        if (state.sessionStorageMode === 'disabled') return undefined;
+        const currentSession = state.sessions.find((candidate) => candidate.id === id);
+        if (!currentSession) return undefined;
+
+        const updatedSession: ChatSession = {
+          ...session,
+          id,
+          metadata: session.metadata || {},
+          createdAt: session.createdAt || currentSession.createdAt,
+          updatedAt: new Date(),
+        };
+        set((current) => ({ sessions: upsertSession(current.sessions, updatedSession) }));
+
         if (state.sessionStorageMode === 'api') {
-          const sessionToUpdate = updatedSessions.find(s => s.id === id);
-          if (sessionToUpdate) {
-            fetch(`${state.sessionRoute}/${id}`, {
+          await enqueueSessionWrite(id, async () => {
+            const response = await fetch(`${state.sessionRoute}/${id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(sessionToUpdate)
-            }).catch(console.error);
-          }
+              body: JSON.stringify(updatedSession),
+            });
+            await parseJsonResponse<ChatSession>(response);
+          });
         }
-        
-        return { sessions: updatedSessions };
-      }),
+
+        return updatedSession;
+      },
+      updateSession: async (id, update) => {
+        if (get().sessionStorageMode === 'disabled') return undefined;
+        let currentSession = get().sessions.find((session) => session.id === id);
+        if (!currentSession) currentSession = await get().getSession(id);
+        if (!currentSession) return undefined;
+
+        const updatedSession: ChatSession = {
+          ...currentSession,
+          ...update,
+          metadata: { ...currentSession.metadata, ...update.metadata },
+          updatedAt: new Date(),
+        };
+        const state = get();
+        set((current) => ({ sessions: upsertSession(current.sessions, updatedSession) }));
+
+        if (state.sessionStorageMode === 'api') {
+          await enqueueSessionWrite(id, async () => {
+            const response = await fetch(`${state.sessionRoute}/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(update),
+            });
+            await parseJsonResponse<ChatSession>(response);
+          });
+        }
+
+        return updatedSession;
+      },
+      renameSession: (id, title) => {
+        if (get().sessionStorageMode === 'disabled') return Promise.resolve(undefined);
+        const trimmedTitle = title.trim();
+        if (!trimmedTitle) {
+          return Promise.reject(new Error('A session title cannot be empty.'));
+        }
+        return get().updateSession(id, { title: trimmedTitle });
+      },
+      setSessionPinned: (id, isPinned) => get().sessionStorageMode === 'disabled'
+        ? Promise.resolve(undefined)
+        : get().updateSession(id, { metadata: { isPinned } }),
+      removeSession: async (id) => {
+        const state = get();
+        if (state.sessionStorageMode === 'disabled') return;
+        if (state.sessionStorageMode === 'api') {
+          await enqueueSessionWrite(id, async () => {
+            const response = await fetch(`${state.sessionRoute}/${id}`, { method: 'DELETE' });
+            await parseJsonResponse(response);
+          });
+        }
+
+        set((current) => ({
+          sessions: current.sessions.filter((session) => session.id !== id),
+          activeSessionId: current.activeSessionId === id ? null : current.activeSessionId,
+        }));
+      },
+      updateSessionMessages: async (id, messages) => {
+        const state = get();
+        if (state.sessionStorageMode === 'disabled') return undefined;
+        const currentSession = state.sessions.find((session) => session.id === id);
+        if (!currentSession) return undefined;
+
+        const updatedSession: ChatSession = {
+          ...currentSession,
+          messages: toStoredMessages(messages, id, state.a2uiToolName),
+          updatedAt: new Date(),
+        };
+        set((current) => ({ sessions: upsertSession(current.sessions, updatedSession) }));
+
+        if (state.sessionStorageMode === 'api') {
+          await enqueueSessionWrite(id, async () => {
+            const response = await fetch(`${state.sessionRoute}/${id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updatedSession),
+            });
+            await parseJsonResponse<ChatSession>(response);
+          });
+        }
+
+        return updatedSession;
+      },
     }),
     {
       name: 'omnichat-storage',

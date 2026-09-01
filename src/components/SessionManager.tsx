@@ -4,12 +4,34 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui
 import { Button } from './ui/button';
 import { SessionManagerProps } from '../types';
 import { useAIChatStore } from '../store/useAIChatStore';
+import type { ChatSession } from '../store/useAIChatStore';
 import { AIChatContext } from './AIChatProvider';
 import { AGUIChatContext } from './AGUIChatProvider';
-import { PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, MessageSquarePlus, Trash2, MessageSquare } from 'lucide-react';
+import { PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, MessageSquarePlus, Trash2, MessageSquare, Pin, PinOff, Pencil, LoaderCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SheetClose } from './ui/sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+
+const formatRelativeTime = (value: Date | string, now: number) => {
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return '';
+
+  const elapsedSeconds = Math.max(0, Math.floor((now - timestamp) / 1000));
+  if (elapsedSeconds < 5) return 'now';
+  if (elapsedSeconds < 60) return `${elapsedSeconds} second${elapsedSeconds === 1 ? '' : 's'} ago`;
+
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) return `${elapsedMinutes} minute${elapsedMinutes === 1 ? '' : 's'} ago`;
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `${elapsedHours} hour${elapsedHours === 1 ? '' : 's'} ago`;
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  if (elapsedDays < 365) return `${elapsedDays} day${elapsedDays === 1 ? '' : 's'} ago`;
+
+  const elapsedYears = Math.floor(elapsedDays / 365);
+  return `${elapsedYears} year${elapsedYears === 1 ? '' : 's'} ago`;
+};
 
 export function SessionManager({ 
   label = "Sessions", 
@@ -27,47 +49,36 @@ export function SessionManager({
     listStyle = {},
     newConversationButtonStyles = {}
   } = sessionManagerComponentStyles;
-  const { sessions, activeSessionId, setActiveSessionId, removeSession, addSession, sessionStorageMode, sessionRoute } = useAIChatStore();
+  const { sessions, activeSessionId, sessionStorageMode, setActiveSessionId, removeSession, createSession, getSession, renameSession, setSessionPinned } = useAIChatStore();
   const aiContext = React.useContext(AIChatContext);
   const aguiContext = React.useContext(AGUIChatContext);
   const context = aiContext || aguiContext;
   
   const [isOpen, setIsOpen] = useState(false);
   const [isInlineCollapsed, setIsInlineCollapsed] = useState(false);
+  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  const configuredSessionStorageMode = context?.sessionStorageMode ?? sessionStorageMode;
+  if (configuredSessionStorageMode === 'disabled') {
+    throw new Error('SessionManager requires sessionStorageMode to be "memory" or "api".');
+  }
   
   const isSheetCollapsible = collapsible === true || collapsible === 'sheet';
   const isInlineCollapsible = collapsible === 'inline';
 
+  React.useEffect(() => {
+    const intervalId = window.setInterval(() => setCurrentTime(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   // Restore session messages on mount if there's an active session
   React.useEffect(() => {
     const loadInitialSession = async () => {
-      if (activeSessionId) {
-        let initialSession = sessions.find(s => s.id === activeSessionId);
-        
-        if (sessionStorageMode === 'api' && sessionRoute) {
-          try {
-            const response = await fetch(`${sessionRoute}/${activeSessionId}`);
-            if (!response.ok) {
-              if (response.status === 404) {
-                console.error(`Initial session ${activeSessionId} not found on server.`);
-                removeSession(activeSessionId);
-                if (context && context.setMessages) {
-                  context.setMessages([]);
-                }
-                return;
-              }
-              throw new Error(`Failed to fetch initial session: ${response.status} ${response.statusText}`);
-            }
-            const contentType = response.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-              initialSession = await response.json();
-            } else {
-              throw new Error(`Expected JSON response, got ${contentType}`);
-            }
-          } catch (error) {
-            console.error('Error fetching initial session:', error);
-          }
-        }
+      if (!activeSessionId) return;
+
+      try {
+        const initialSession = await getSession(activeSessionId);
 
         if (initialSession && context && context.setMessages) {
           const vercelMessages = (initialSession.messages || []).map((m: any) => {
@@ -90,7 +101,11 @@ export function SessionManager({
             };
           });
           context.setMessages(vercelMessages as any[]);
+        } else if (context?.setMessages) {
+          context.setMessages([]);
         }
+      } catch (error) {
+        console.error('Failed to load the initial session:', error);
       }
     };
     
@@ -99,20 +114,27 @@ export function SessionManager({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleNewSession = () => {
+  const handleNewSession = async () => {
     if (onNewSession) {
       onNewSession();
     } else {
-      const newSession = {
-        id: Date.now().toString(),
-        title: 'New Session',
-        model: 'default',
-        metadata: {},
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      addSession(newSession);
-      setActiveSessionId(newSession.id);
+      try {
+        const now = new Date();
+        const newSession = await createSession({
+          id: typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          title: 'New Session',
+          model: 'default',
+          metadata: {},
+          createdAt: now,
+          updatedAt: now,
+        });
+        setActiveSessionId(newSession.id);
+      } catch (error) {
+        console.error('Failed to create a new session:', error);
+        return;
+      }
     }
     
     // Clear chat messages and stop ongoing requests when a new session is created
@@ -129,32 +151,15 @@ export function SessionManager({
       context.stop();
     }
     
-    let sessionToLoad = sessions.find(s => s.id === id);
-    
-    if (sessionStorageMode === 'api' && sessionRoute) {
-      try {
-        const response = await fetch(`${sessionRoute}/${id}`);
-        if (!response.ok) {
-          if (response.status === 404) {
-            console.error(`Session ${id} not found on server.`);
-            removeSession(id);
-            if (activeSessionId === id && context && context.setMessages) {
-              context.setMessages([]);
-            }
-            return;
-          }
-          throw new Error(`Failed to fetch session: ${response.status} ${response.statusText}`);
-        }
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          sessionToLoad = await response.json();
-        } else {
-          throw new Error(`Expected JSON response, got ${contentType}`);
-        }
-      } catch (error) {
-        console.error('Error fetching session:', error);
-      }
+    let sessionToLoad;
+    try {
+      sessionToLoad = await getSession(id);
+    } catch (error) {
+      console.error('Error fetching session:', error);
+      return;
     }
+
+    if (!sessionToLoad) return;
 
     if (context && context.setMessages) {
       const vercelMessages = (sessionToLoad?.messages || []).map((m: any) => {
@@ -178,10 +183,47 @@ export function SessionManager({
       });
       context.setMessages(vercelMessages as any[]);
     }
-    if (onSessionSelect) {
-      onSessionSelect(id);
-    } else {
-      setActiveSessionId(id);
+    setActiveSessionId(id);
+    onSessionSelect?.(id);
+  };
+
+  const handleAgentRename = async (session: ChatSession) => {
+    const chatContext = context;
+    if (!chatContext?.generateSessionTitle) return;
+
+    const sourceMessages = session.id === activeSessionId && chatContext.messages.length > 0
+      ? chatContext.messages
+      : session.messages || [];
+
+    if (sourceMessages.length === 0) return;
+
+    setRenamingSessionId(session.id);
+    try {
+      const title = await chatContext.generateSessionTitle(sourceMessages);
+      await renameSession(session.id, title);
+    } catch (error) {
+      console.error('Failed to generate a session title:', error);
+    } finally {
+      setRenamingSessionId(null);
+    }
+  };
+
+  const handlePinToggle = async (id: string, isPinned: boolean) => {
+    try {
+      await setSessionPinned(id, !isPinned);
+    } catch (error) {
+      console.error('Failed to update the pinned state:', error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await removeSession(id);
+      if (activeSessionId === id && context?.setMessages) {
+        context.setMessages([]);
+      }
+    } catch (error) {
+      console.error('Failed to delete the session:', error);
     }
   };
 
@@ -277,12 +319,37 @@ export function SessionManager({
               style={typeof listStyle?.itemStyle === 'object' ? listStyle.itemStyle : undefined}
               onClick={() => handleSessionSelect(s.id)}
             >
-              <div className="flex items-center gap-3 overflow-hidden">
-                <MessageSquare size={16} className="text-muted-foreground flex-shrink-0" />
-                <span className={cn("truncate text-sm", typeof listStyle?.textStyle === 'string' ? listStyle.textStyle : "")} style={typeof listStyle?.textStyle === 'object' ? listStyle.textStyle : undefined}>{s.title}</span>
+              <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
+                <MessageSquare size={16} className="shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <span className={cn("block truncate text-sm", typeof listStyle?.textStyle === 'string' ? listStyle.textStyle : "")} style={typeof listStyle?.textStyle === 'object' ? listStyle.textStyle : undefined}>{s.title}</span>
+                  <span className={cn("block truncate text-xs text-muted-foreground", typeof listStyle?.timeStyle === 'string' ? listStyle.timeStyle : "")} style={typeof listStyle?.timeStyle === 'object' ? listStyle.timeStyle : undefined} title={new Date(s.updatedAt).toLocaleString()}>
+                    {formatRelativeTime(s.updatedAt, currentTime)}
+                  </span>
+                </div>
+                {s.metadata?.isPinned && <Pin size={13} className="shrink-0 text-muted-foreground" aria-label="Pinned" />}
               </div>
               
               <div className={cn("flex items-center transition-opacity", activeSessionId === s.id ? "opacity-100" : "opacity-0 group-hover:opacity-100")} onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground"
+                  title={s.metadata?.isPinned ? 'Unpin conversation' : 'Pin conversation'}
+                  onClick={() => void handlePinToggle(s.id, Boolean(s.metadata?.isPinned))}
+                >
+                  {s.metadata?.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground"
+                  title="Generate conversation title"
+                  disabled={renamingSessionId !== null || (!s.messages?.length && (s.id !== activeSessionId || !context?.messages.length))}
+                  onClick={() => void handleAgentRename(s)}
+                >
+                  {renamingSessionId === s.id ? <LoaderCircle size={14} className="animate-spin" /> : <Pencil size={14} />}
+                </Button>
                 <AlertDialog>
                   <AlertDialogTrigger render={
                     <Button 
@@ -305,12 +372,7 @@ export function SessionManager({
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => {
-                        removeSession(s.id);
-                        if (activeSessionId === s.id && context && context.setMessages) {
-                          context.setMessages([]);
-                        }
-                      }}>Delete</AlertDialogAction>
+                      <AlertDialogAction onClick={() => void handleDelete(s.id)}>Delete</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>

@@ -90,7 +90,8 @@ export function ChatManager({
 
   const { messages, input, handleInputChange, handleSubmit, status } = context;
   const events = (context as any).events || [];
-  const { addSession, setActiveSessionId, activeSessionId, updateSessionMessages } = useAIChatStore();
+  const { ensureSession, setActiveSessionId, activeSessionId, sessionStorageMode, updateSessionMessages } = useAIChatStore();
+  const sessionsEnabled = sessionStorageMode !== 'disabled';
 
   const activeSessionIdRef = React.useRef(activeSessionId);
   
@@ -99,7 +100,13 @@ export function ChatManager({
   }, [activeSessionId]);
 
   React.useEffect(() => {
-    if (activeSessionIdRef.current && context?.messages) {
+    if (sessionsEnabled && sessionId && !activeSessionId) {
+      setActiveSessionId(sessionId);
+    }
+  }, [activeSessionId, sessionId, sessionsEnabled, setActiveSessionId]);
+
+  React.useEffect(() => {
+    if (sessionsEnabled && activeSessionIdRef.current && context?.messages) {
       const session = useAIChatStore.getState().sessions.find(s => s.id === activeSessionIdRef.current);
       const hasExistingMessages = session?.messages && session.messages.length > 0;
       
@@ -107,9 +114,11 @@ export function ChatManager({
         // Prevent wiping out existing session messages with an empty array on mount or during transitions
         return;
       }
-      updateSessionMessages(activeSessionIdRef.current, context.messages);
+      void updateSessionMessages(activeSessionIdRef.current, context.messages).catch((error) => {
+        console.error('Failed to save session messages:', error);
+      });
     }
-  }, [context?.messages, updateSessionMessages]);
+  }, [activeSessionId, context?.messages, sessionsEnabled, updateSessionMessages]);
   const a2uiToolName = useAIChatStore((state) => state.a2uiToolName);
   const isLoading = status === 'submitted' || status === 'streaming';
   const globalTheme = useAIChatStore((state) => state.theme);
@@ -188,39 +197,47 @@ export function ChatManager({
     }
   }, [messages, autoScroll]);
 
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    if (!activeSessionId && input.trim()) {
-      const newSession = {
-        id: Date.now().toString(),
-        title: input.slice(0, 30) || 'New Session',
-        model: 'default',
-        metadata: {},
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      addSession(newSession);
-      setActiveSessionId(newSession.id);
-    }
-    handleSubmit(e);
-  };
-  
-  const handleChipClick = (prompt: string) => {
-    if (!activeSessionId && prompt.trim()) {
-      const newSession = {
-        id: Date.now().toString(),
-        title: prompt.slice(0, 30) || 'New Session',
-        model: 'default',
-        metadata: {},
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      addSession(newSession);
-      setActiveSessionId(newSession.id);
-    }
-    if (context?.append) {
-      context.append({ role: 'user', content: prompt });
+  const ensureActiveSession = (firstMessage: string) => ensureSession(firstMessage, sessionId);
+
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const prompt = input.trim();
+    if (!prompt) return;
+
+    try {
+      const resolvedSessionId = await ensureActiveSession(prompt);
+      handleSubmit(e, resolvedSessionId ? { body: { sessionId: resolvedSessionId } } : undefined);
+    } catch (error) {
+      console.error('Failed to create a session before sending the message:', error);
     }
   };
+
+  const handleChipClick = async (prompt: string) => {
+    if (!prompt.trim() || !context?.append) return;
+
+    try {
+      const resolvedSessionId = await ensureActiveSession(prompt);
+      await context.append(
+        { role: 'user', content: prompt },
+        resolvedSessionId ? { body: { sessionId: resolvedSessionId } } : undefined,
+      );
+    } catch (error) {
+      console.error('Failed to create a session before sending the prompt chip:', error);
+    }
+  };
+
+  // Covers messages appended through the chat context instead of this component's form.
+  React.useEffect(() => {
+    if (!sessionsEnabled) return;
+    if (activeSessionId || sessionId) return;
+
+    const firstUserMessage = messages.find((message) => message.role === 'user' && message.content.trim());
+    if (!firstUserMessage) return;
+
+    void ensureActiveSession(firstUserMessage.content).catch((error) => {
+      console.error('Failed to create a session for the outgoing message:', error);
+    });
+  }, [activeSessionId, messages, sessionId, sessionsEnabled]);
   
   const getTogglePositionStyle = (pos?: string): React.CSSProperties => {
     switch (pos) {

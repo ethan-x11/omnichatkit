@@ -207,8 +207,17 @@ import { User, Bot } from 'lucide-react';
 
 The `SessionManager` handles chat history.
 
+Enable sessions on `OmniChat` (or either chat provider) before rendering it. Session handling is disabled by default, so chats have no session creation, persistence, or rename requests unless you opt in.
+
+```tsx
+<OmniChat api_mode="ag-ui" sessionStorageMode="api">
+  <SessionManager />
+  <ChatManager useA2UI={false} />
+</OmniChat>
+```
+
 #### Props
-- **`storageMode`** (`"api" | "memory"`): Whether to fetch sessions from an API route or store them locally in memory.
+- **`sessionStorageMode`** (`"disabled" | "api" | "memory"`): Set on `OmniChat` or a chat provider. `"disabled"` is the default; `SessionManager` throws if it is rendered in this mode.
 - **`collapsible`** (`boolean`): Enables the drawer view for space-saving layouts.
 - **`position`** (`"left" | "right"`): Where the manager should dock.
 

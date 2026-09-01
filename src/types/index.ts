@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import type { Message as AiMessage, CreateMessage } from 'ai';
 
 export type ChatTheme = 'standard' | 'dark' | 'light';
-export type StorageMode = 'memory' | 'api';
+export type StorageMode = 'disabled' | 'memory' | 'api';
 export type A2UILayout = 'inline' | 'split';
 export type ComponentPosition = 'left' | 'right' | 'top' | 'bottom';
 export type DisplayMode = 'embedded' | 'floating';
@@ -168,6 +168,7 @@ export type ChatManagerProps = ChatManagerBaseProps & (
 export interface SessionListStyles {
   itemStyle?: React.CSSProperties | string;
   textStyle?: React.CSSProperties | string;
+  timeStyle?: React.CSSProperties | string;
   deleteButtonStyle?: React.CSSProperties | string;
   deleteIconStyle?: React.CSSProperties | string;
 }

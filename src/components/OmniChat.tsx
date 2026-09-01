@@ -12,7 +12,7 @@ export function OmniChat({
   a2uiProps,
   apiEndpoint,
   chatManagerProps,
-  sessionStorageMode = 'memory',
+  sessionStorageMode = 'disabled',
   sessionRoute = '/session',
   children
 }: OmniChatProps) {

@@ -12,28 +12,41 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
   const [error, setError] = useState<Error | undefined>(undefined);
   const [events, setEvents] = useState<BaseEvent[]>([]);
   const agentRef = useRef<HttpAgent | null>(null);
+  const agentSessionIdRef = useRef<string | undefined>(body?.sessionId);
   const abortControllerRef = useRef<AbortController | null>(null);
-  
+  const messagesRef = useRef<any[]>([]);
+  const lastAssistantResponseRef = useRef('');
+
   // Minimal placeholder implementation for UseChatHelpers 
   const data = undefined;
-  
+
   useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  const createAgent = useCallback((currentSessionId?: string) => {
     const baseApi = api.endsWith('/') ? api.slice(0, -1) : api;
     const finalApiUrl = agentId ? `${baseApi}/${agentId}` : baseApi;
-    const currentSessionId = body?.sessionId;
-    
-    agentRef.current = new HttpAgent({ 
+
+    return new HttpAgent({
       url: finalApiUrl,
-      threadId: currentSessionId, // Persist proper threadId across streams for the same session, but start fresh when session changes
+      threadId: currentSessionId,
       fetch: (fetchUrl, init) => fetch(fetchUrl, {
         ...init,
         signal: abortControllerRef.current?.signal || init?.signal
       })
     });
+  }, [agentId, api]);
+
+  useEffect(() => {
+    const currentSessionId = body?.sessionId;
+    agentRef.current = createAgent(currentSessionId);
+    agentSessionIdRef.current = currentSessionId;
+
     return () => {
       agentRef.current?.abortRun();
     };
-  }, [api, agentId, body?.sessionId]);
+  }, [body?.sessionId, createAgent]);
 
   const handleInputChange = useCallback((e: any) => {
     setInput(e.target.value);
@@ -59,6 +72,13 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
   }, []);
 
   const append = useCallback(async (message: any, chatRequestOptions?: any) => {
+    const requestedSessionId = chatRequestOptions?.body?.sessionId ?? body?.sessionId;
+    if (requestedSessionId !== agentSessionIdRef.current) {
+      agentRef.current?.abortRun();
+      agentRef.current = createAgent(requestedSessionId);
+      agentSessionIdRef.current = requestedSessionId;
+    }
+
     if (!agentRef.current) return '';
     const newMessage = {
       id: Date.now().toString(),
@@ -67,13 +87,16 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
     };
     
     // Optimistic UI
-    setMessages((prev) => [...prev, newMessage]);
+    const previousMessages = messagesRef.current;
+    messagesRef.current = [...previousMessages, newMessage];
+    lastAssistantResponseRef.current = '';
+    setMessages(messagesRef.current);
     setStatus('submitted');
     setError(undefined);
     setEvents([]);
     
     try {
-      const aguiMessages = [...messages, newMessage].map(m => ({
+      const aguiMessages = messagesRef.current.map(m => ({
         role: m.role as any,
         content: m.content as string,
         id: m.id
@@ -148,13 +171,18 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
                 });
               }
             });
+            messagesRef.current = processedMessages;
+            const latestAssistantMessage = [...processedMessages].reverse().find((message) => message.role === 'assistant');
+            if (typeof latestAssistantMessage?.content === 'string' && latestAssistantMessage.content) {
+              lastAssistantResponseRef.current = latestAssistantMessage.content;
+            }
             setMessages(processedMessages);
           }
         },
       });
       
       setStatus('ready');
-      return '';
+      return lastAssistantResponseRef.current;
     } catch (err) {
       const isAborted = String(err).toLowerCase().includes('aborted') || (err instanceof Error && err.name === 'AbortError');
       if (isAborted) {
@@ -173,15 +201,15 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
       }
       return '';
     }
-  }, [messages]);
+  }, [body?.sessionId, createAgent]);
 
-  const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>, chatRequestOptions?: any) => {
     e.preventDefault();
     if (!input.trim()) return;
     
     const content = input;
     setInput('');
-    append({ role: 'user', content });
+    void append({ role: 'user', content }, chatRequestOptions);
   }, [input, append]);
 
   const reload = useCallback(async () => {
