@@ -169,7 +169,33 @@ export interface SessionListStyles {
   itemStyle?: React.CSSProperties | string;
   textStyle?: React.CSSProperties | string;
   timeStyle?: React.CSSProperties | string;
+  listItemIconStyles?: {
+    Icon?: ReactNode;
+    IconStyle?: React.CSSProperties | string;
+  };
+  listItemPinButtonStyles?: {
+    Icon?: ReactNode;
+    IconStyles?: React.CSSProperties | string;
+  };
+  listItemMenuIconButtonStyles?: {
+    Icon?: ReactNode;
+    IconStyle?: React.CSSProperties | string;
+  };
+  listItemRenameButtonStyles?: {
+    Icon?: ReactNode;
+    IconStyle?: React.CSSProperties | string;
+    Text?: ReactNode;
+    TextStyle?: React.CSSProperties | string;
+  };
+  listItemDeleteButtonStyles?: {
+    Icon?: ReactNode;
+    IconStyle?: React.CSSProperties | string;
+    Text?: ReactNode;
+    TextStyle?: React.CSSProperties | string;
+  };
+  /** @deprecated Use listItemDeleteButtonStyles instead. */
   deleteButtonStyle?: React.CSSProperties | string;
+  /** @deprecated Use listItemDeleteButtonStyles.IconStyle instead. */
   deleteIconStyle?: React.CSSProperties | string;
 }
 

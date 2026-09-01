@@ -154,6 +154,22 @@ const toStoredMessages = (messages: any[], sessionId: string, a2uiToolName: stri
   } as ChatMessage;
 });
 
+const messagesAreEqual = (currentMessages: ChatMessage[] | undefined, nextMessages: ChatMessage[]) => {
+  const current = currentMessages || [];
+  if (current.length !== nextMessages.length) return false;
+
+  return current.every((message, index) => {
+    const next = nextMessages[index];
+
+    return message.id === next.id
+      && message.role === next.role
+      && message.content === next.content
+      && (message.hitlStatus || 'none') === (next.hitlStatus || 'none')
+      && JSON.stringify(message.componentPayload || null) === JSON.stringify(next.componentPayload || null)
+      && JSON.stringify(message.toolCalls || null) === JSON.stringify(next.toolCalls || null);
+  });
+};
+
 interface AIChatState {
   catalog: A2UICatalog;
   theme: ChatTheme;
@@ -424,9 +440,14 @@ export const useAIChatStore = create<AIChatState>()(
         const currentSession = state.sessions.find((session) => session.id === id);
         if (!currentSession) return undefined;
 
+        const storedMessages = toStoredMessages(messages, id, state.a2uiToolName);
+        if (messagesAreEqual(currentSession.messages, storedMessages)) {
+          return currentSession;
+        }
+
         const updatedSession: ChatSession = {
           ...currentSession,
-          messages: toStoredMessages(messages, id, state.a2uiToolName),
+          messages: storedMessages,
           updatedAt: new Date(),
         };
         set((current) => ({ sessions: upsertSession(current.sessions, updatedSession) }));
@@ -449,9 +470,14 @@ export const useAIChatStore = create<AIChatState>()(
       name: 'omnichat-storage',
       storage: createJSONStorage(() => typeof window !== 'undefined' ? sessionStorage : ({} as any)),
       partialize: (state) => ({
-        // Only persist sessions and activeSessionId if we are in 'memory' mode
+        // Keep memory sessions, but never restore an active selection on reload.
         sessions: state.sessionStorageMode === 'memory' ? state.sessions : [],
-        activeSessionId: state.sessionStorageMode === 'memory' ? state.activeSessionId : null
+        activeSessionId: null
+      }),
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...(persistedState as Partial<AIChatState>),
+        activeSessionId: null,
       }),
     }
   )

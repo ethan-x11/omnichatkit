@@ -9,11 +9,8 @@
     "ai-chat",
     "generative-ui",
     "chat-components",
-    "server-components",
     "llm-ui",
     "a2ui",
-    "shadcn",
-    "tailwindcss",
     "chatbot",
     "conversational-ui",
     "rsc"
@@ -38,7 +35,9 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm pkg delete devDependencies",
+    "postpublish": "git checkout -- package.json"
   },
   "peerDependencies": {
     "react": "^19.0.0",

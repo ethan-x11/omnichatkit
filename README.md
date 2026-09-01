@@ -221,6 +221,24 @@ Enable sessions on `OmniChat` (or either chat provider) before rendering it. Ses
 - **`collapsible`** (`boolean`): Enables the drawer view for space-saving layouts.
 - **`position`** (`"left" | "right"`): Where the manager should dock.
 
+#### Session list style slots
+
+Use `sessionManagerComponentStyles.listStyle` to replace the list icons or style each action:
+
+```tsx
+<SessionManager
+  sessionManagerComponentStyles={{
+    listStyle: {
+      listItemIconStyles: { Icon: <MessageSquare />, IconStyle: 'text-primary' },
+      listItemPinButtonStyles: { Icon: <Pin />, IconStyles: 'text-primary' },
+      listItemMenuIconButtonStyles: { Icon: <MoreHorizontal />, IconStyle: 'text-primary' },
+      listItemRenameButtonStyles: { Icon: <Pencil />, IconStyle: 'text-primary', Text: 'Edit', TextStyle: 'font-semibold' },
+      listItemDeleteButtonStyles: { Icon: <Trash2 />, IconStyle: 'text-destructive', Text: 'Remove', TextStyle: 'font-semibold' },
+    },
+  }}
+/>
+```
+
 ### 6. Working with AI Reasoning (e.g. DeepSeek `<think>`)
 OmniChatKit automatically parses and extracts `<think>` tags from incoming model streams. It strips these out of the primary text response and renders them natively as a beautiful, collapsible "Reasoning" accordion inside the message block! No extra configuration is required.
 

@@ -68,7 +68,6 @@ export function ChatManager({
   labels = {},
   promptChips,
   agentId,
-  sessionId,
   a2uiPosition = 'left',
   collapsibleA2UI = false,
   maxInputCharacter
@@ -90,7 +89,7 @@ export function ChatManager({
 
   const { messages, input, handleInputChange, handleSubmit, status } = context;
   const events = (context as any).events || [];
-  const { setActiveSessionId, activeSessionId, sessionStorageMode, updateSessionMessages } = useAIChatStore();
+  const { activeSessionId, sessionStorageMode, updateSessionMessages } = useAIChatStore();
   const sessionsEnabled = sessionStorageMode !== 'disabled';
 
   const activeSessionIdRef = React.useRef(activeSessionId);
@@ -98,12 +97,6 @@ export function ChatManager({
   React.useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
-
-  React.useEffect(() => {
-    if (sessionsEnabled && sessionId && !activeSessionId) {
-      setActiveSessionId(sessionId);
-    }
-  }, [activeSessionId, sessionId, sessionsEnabled, setActiveSessionId]);
 
   React.useEffect(() => {
     if (sessionsEnabled && activeSessionIdRef.current && context?.messages) {

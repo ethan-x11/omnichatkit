@@ -6,10 +6,41 @@ import { SessionManagerProps } from '../types';
 import { useAIChatStore } from '../store/useAIChatStore';
 import { AIChatContext } from './AIChatProvider';
 import { AGUIChatContext } from './AGUIChatProvider';
-import { PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, MessageSquarePlus, Trash2, MessageSquare, Pin, PinOff, Pencil, Check, X } from 'lucide-react';
+import { PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, MessageSquarePlus, Trash2, MessageSquare, Pin, PinOff, Pencil, Check, X, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SheetClose } from './ui/sheet';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+
+type StyleValue = React.CSSProperties | string | undefined;
+
+const styleClassName = (...styles: StyleValue[]) => cn(
+  ...styles.filter((style): style is string => typeof style === 'string'),
+);
+
+const styleObject = (...styles: StyleValue[]) => {
+  const styleValues = styles.filter((style): style is React.CSSProperties => typeof style === 'object' && style !== null);
+  return styleValues.length > 0 ? Object.assign({}, ...styleValues) : undefined;
+};
+
+const renderStyledIcon = (
+  icon: React.ReactNode | undefined,
+  fallback: React.ReactElement<{ className?: string; style?: React.CSSProperties }>,
+  ...styles: StyleValue[]
+) => {
+  const iconElement = icon ?? fallback;
+  const className = styleClassName(...styles);
+  const style = styleObject(...styles);
+
+  if (React.isValidElement<{ className?: string; style?: React.CSSProperties }>(iconElement)) {
+    return React.cloneElement(iconElement, {
+      className: cn(iconElement.props.className, className),
+      style: { ...iconElement.props.style, ...style },
+    });
+  }
+
+  return <span className={className} style={style}>{iconElement}</span>;
+};
 
 const formatRelativeTime = (value: Date | string, now: number) => {
   const timestamp = new Date(value).getTime();
@@ -48,7 +79,7 @@ export function SessionManager({
     listStyle = {},
     newConversationButtonStyles = {}
   } = sessionManagerComponentStyles;
-  const { sessions, activeSessionId, sessionStorageMode, setActiveSessionId, removeSession, createSession, getSession, renameSession, setSessionPinned } = useAIChatStore();
+  const { sessions, activeSessionId, sessionStorageMode, setActiveSessionId, removeSession, getSession, renameSession, setSessionPinned } = useAIChatStore();
   const aiContext = React.useContext(AIChatContext);
   const aguiContext = React.useContext(AGUIChatContext);
   const context = aiContext || aguiContext;
@@ -57,6 +88,9 @@ export function SessionManager({
   const [isInlineCollapsed, setIsInlineCollapsed] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [sessionTitle, setSessionTitle] = useState('');
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const [hoveredSessionId, setHoveredSessionId] = useState<string | null>(null);
+  const [openSessionMenuId, setOpenSessionMenuId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   const configuredSessionStorageMode = context?.sessionStorageMode ?? sessionStorageMode;
@@ -114,36 +148,19 @@ export function SessionManager({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleNewSession = async () => {
-    if (onNewSession) {
-      onNewSession();
-    } else {
-      try {
-        const now = new Date();
-        const newSession = await createSession({
-          id: typeof crypto !== 'undefined' && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          title: 'New Session',
-          model: 'default',
-          metadata: {},
-          createdAt: now,
-          updatedAt: now,
-        });
-        setActiveSessionId(newSession.id);
-      } catch (error) {
-        console.error('Failed to create a new session:', error);
-        return;
-      }
-    }
-    
-    // Clear chat messages and stop ongoing requests when a new session is created
+  const handleNewSession = () => {
+    // A new conversation is a blank, unselected draft. Its session is created
+    // only when the user sends the first message.
+    setActiveSessionId(null);
+
     if (context) {
       if (context.stop) context.stop();
       if (context.setMessages) {
         context.setMessages([]);
       }
     }
+
+    onNewSession?.();
   };
 
   const handleSessionSelect = async (id: string) => {
@@ -214,6 +231,12 @@ export function SessionManager({
     } catch (error) {
       console.error('Failed to delete the session:', error);
     }
+  };
+
+  const deletingSession = sessions.find((session) => session.id === deletingSessionId);
+  const showSessionActions = (id: string) => setHoveredSessionId(id);
+  const hideSessionActions = (id: string) => {
+    setHoveredSessionId((currentId) => currentId === id ? null : currentId);
   };
 
   const CollapseIcon = position === 'right' ? PanelRightClose : 
@@ -307,6 +330,12 @@ export function SessionManager({
               className={cn(`group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors hover:bg-muted ${activeSessionId === s.id ? 'bg-muted font-medium' : ''}`, typeof listStyle?.itemStyle === 'string' ? listStyle.itemStyle : "")}
               style={typeof listStyle?.itemStyle === 'object' ? listStyle.itemStyle : undefined}
               onClick={() => handleSessionSelect(s.id)}
+              onMouseEnter={() => showSessionActions(s.id)}
+              onMouseLeave={() => hideSessionActions(s.id)}
+              onPointerEnter={() => showSessionActions(s.id)}
+              onPointerLeave={() => hideSessionActions(s.id)}
+              onFocusCapture={() => showSessionActions(s.id)}
+              onBlurCapture={() => hideSessionActions(s.id)}
             >
               {editingSessionId === s.id ? (
                 <form
@@ -349,7 +378,11 @@ export function SessionManager({
                 </form>
               ) : (
                 <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
-                  <MessageSquare size={16} className="shrink-0 text-muted-foreground" />
+                  {renderStyledIcon(
+                    listStyle?.listItemIconStyles?.Icon,
+                    <MessageSquare size={16} className="shrink-0 text-muted-foreground" />,
+                    listStyle?.listItemIconStyles?.IconStyle,
+                  )}
                   <div className="min-w-0 flex-1">
                     <span className={cn("block truncate text-sm", typeof listStyle?.textStyle === 'string' ? listStyle.textStyle : "")} style={typeof listStyle?.textStyle === 'object' ? listStyle.textStyle : undefined}>{s.title}</span>
                     <span className={cn("block truncate text-xs text-muted-foreground", typeof listStyle?.timeStyle === 'string' ? listStyle.timeStyle : "")} style={typeof listStyle?.timeStyle === 'object' ? listStyle.timeStyle : undefined} title={new Date(s.updatedAt).toLocaleString()}>
@@ -360,54 +393,94 @@ export function SessionManager({
                 </div>
               )}
               
-              <div className={cn("flex items-center transition-opacity", activeSessionId === s.id ? "opacity-100" : "opacity-0 group-hover:opacity-100")} onClick={(e) => e.stopPropagation()}>
+              <div
+                className={cn("items-center", (hoveredSessionId === s.id || openSessionMenuId === s.id) ? "flex" : "hidden")}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-muted-foreground"
-                  title={s.metadata?.isPinned ? 'Unpin conversation' : 'Pin conversation'}
-                  onClick={() => void handlePinToggle(s.id, Boolean(s.metadata?.isPinned))}
-                >
-                  {s.metadata?.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                className="h-7 w-7 text-muted-foreground"
+                title={s.metadata?.isPinned ? 'Unpin conversation' : 'Pin conversation'}
+                onClick={() => void handlePinToggle(s.id, Boolean(s.metadata?.isPinned))}
+              >
+                  {renderStyledIcon(
+                    listStyle?.listItemPinButtonStyles?.Icon,
+                    s.metadata?.isPinned ? <PinOff size={14} /> : <Pin size={14} />,
+                    listStyle?.listItemPinButtonStyles?.IconStyles,
+                  )}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground"
-                  title="Rename conversation"
-                  onClick={() => {
-                    setEditingSessionId(s.id);
-                    setSessionTitle(s.title);
-                  }}
-                >
-                  <Pencil size={14} />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger render={
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className={cn("h-7 w-7 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 dark:hover:text-red-400 dark:hover:bg-red-500/20", typeof listStyle?.deleteButtonStyle === 'string' ? listStyle.deleteButtonStyle : "")}
-                        style={typeof listStyle?.deleteButtonStyle === 'object' ? listStyle.deleteButtonStyle : undefined}
-                        title="Delete Session"
-                        suppressHydrationWarning={true}
-                    >
-                      <Trash2 size={14} className={typeof listStyle?.deleteIconStyle === 'string' ? listStyle.deleteIconStyle : undefined} style={typeof listStyle?.deleteIconStyle === 'object' ? listStyle.deleteIconStyle : undefined} />
-                    </Button>
-                  } />
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Conversation?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete "{s.title}"? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => void handleDelete(s.id)}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <DropdownMenu onOpenChange={(open) => setOpenSessionMenuId(open ? s.id : null)}>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground"
+                        title="Conversation actions"
+                        aria-label="Conversation actions"
+                      >
+                        {renderStyledIcon(
+                          listStyle?.listItemMenuIconButtonStyles?.Icon,
+                          <MoreHorizontal size={16} />,
+                          listStyle?.listItemMenuIconButtonStyles?.IconStyle,
+                        )}
+                      </Button>
+                    }
+                  />
+                  <DropdownMenuContent
+                    align="end"
+                    className="rounded-2xl p-1"
+                    style={{ width: '9rem', minWidth: '9rem' }}
+                  >
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        className="gap-1.5 rounded-xl px-2 py-1.5 text-xs"
+                        onClick={() => {
+                          setEditingSessionId(s.id);
+                          setSessionTitle(s.title);
+                        }}
+                      >
+                        {renderStyledIcon(
+                          listStyle?.listItemRenameButtonStyles?.Icon,
+                          <Pencil />,
+                          listStyle?.listItemRenameButtonStyles?.IconStyle,
+                        )}
+                        <span
+                          className={styleClassName(listStyle?.listItemRenameButtonStyles?.TextStyle)}
+                          style={styleObject(listStyle?.listItemRenameButtonStyles?.TextStyle)}
+                        >
+                          {listStyle?.listItemRenameButtonStyles?.Text ?? 'Rename'}
+                        </span>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator className="my-0.5" />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        className={cn(
+                          "gap-1.5 rounded-xl px-2 py-1.5 text-xs",
+                          styleClassName(listStyle?.deleteButtonStyle),
+                        )}
+                        style={styleObject(listStyle?.deleteButtonStyle)}
+                        onClick={() => setDeletingSessionId(s.id)}
+                      >
+                        {renderStyledIcon(
+                          listStyle?.listItemDeleteButtonStyles?.Icon,
+                          <Trash2 />,
+                          listStyle?.deleteIconStyle,
+                          listStyle?.listItemDeleteButtonStyles?.IconStyle,
+                        )}
+                        <span
+                          className={styleClassName(listStyle?.listItemDeleteButtonStyles?.TextStyle)}
+                          style={styleObject(listStyle?.listItemDeleteButtonStyles?.TextStyle)}
+                        >
+                          {listStyle?.listItemDeleteButtonStyles?.Text ?? 'Delete'}
+                        </span>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           ))}
@@ -417,6 +490,27 @@ export function SessionManager({
             </div>
           )}
         </div>
+        <AlertDialog open={Boolean(deletingSession)} onOpenChange={(open) => !open && setDeletingSessionId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Conversation?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{deletingSession?.title}"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (deletingSessionId) void handleDelete(deletingSessionId);
+                  setDeletingSessionId(null);
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
