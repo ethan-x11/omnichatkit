@@ -231,7 +231,7 @@ Use `sessionManagerComponentStyles.listStyle` to replace the list icons or style
     listStyle: {
       listItemIconStyles: { Icon: <MessageSquare />, IconStyle: 'text-primary' },
       listItemPinButtonStyles: { Icon: <Pin />, IconStyles: 'text-primary' },
-      listItemMenuIconButtonStyles: { Icon: <MoreHorizontal />, IconStyle: 'text-primary' },
+      listItemMenuButtonStyles: { Icon: <MoreHorizontal />, IconStyle: 'text-primary' },
       listItemRenameButtonStyles: { Icon: <Pencil />, IconStyle: 'text-primary', Text: 'Edit', TextStyle: 'font-semibold' },
       listItemDeleteButtonStyles: { Icon: <Trash2 />, IconStyle: 'text-destructive', Text: 'Remove', TextStyle: 'font-semibold' },
     },

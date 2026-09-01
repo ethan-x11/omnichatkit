@@ -177,7 +177,7 @@ export interface SessionListStyles {
     Icon?: ReactNode;
     IconStyles?: React.CSSProperties | string;
   };
-  listItemMenuIconButtonStyles?: {
+  listItemMenuButtonStyles?: {
     Icon?: ReactNode;
     IconStyle?: React.CSSProperties | string;
   };

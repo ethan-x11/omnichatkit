@@ -421,9 +421,9 @@ export function SessionManager({
                         aria-label="Conversation actions"
                       >
                         {renderStyledIcon(
-                          listStyle?.listItemMenuIconButtonStyles?.Icon,
+                          listStyle?.listItemMenuButtonStyles?.Icon,
                           <MoreHorizontal size={16} />,
-                          listStyle?.listItemMenuIconButtonStyles?.IconStyle,
+                          listStyle?.listItemMenuButtonStyles?.IconStyle,
                         )}
                       </Button>
                     }
