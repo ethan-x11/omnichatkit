@@ -19,7 +19,7 @@ export type MarkdownRendererProps = {
 
 export function MarkdownRenderer({ text, linkedCitations, className }: MarkdownRendererProps) {
   return (
-    <div className={`prose prose-sm dark:prose-invert max-w-none break-all whitespace-pre-wrap ${className || ''}`}>
+    <div className={`prose prose-sm dark:prose-invert max-w-none break-all prose-p:my-1 prose-li:my-0 prose-ul:my-2 prose-ol:my-2 text-foreground ${className || ''}`}>
       <Markdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeRaw, rehypeKatex]}
@@ -76,6 +76,31 @@ export function MarkdownRenderer({ text, linkedCitations, className }: MarkdownR
               </span>
             );
           },
+          p(props) {
+            return <p className="text-foreground">{props.children}</p>
+          },
+          strong(props) {
+            return <strong className="font-semibold text-foreground">{props.children}</strong>
+          },
+          em(props) {
+            return <em className="italic text-foreground">{props.children}</em>
+          },
+          blockquote(props) {
+            return <blockquote className="border-l-2 border-slate-300 dark:border-slate-700 pl-4 italic text-foreground/80">{props.children}</blockquote>
+          },
+          h1(props) { return <h1 className="text-foreground font-bold text-2xl mt-6 mb-4">{props.children}</h1> },
+          h2(props) { return <h2 className="text-foreground font-bold text-xl mt-5 mb-3">{props.children}</h2> },
+          h3(props) { return <h3 className="text-foreground font-semibold text-lg mt-4 mb-2">{props.children}</h3> },
+          h4(props) { return <h4 className="text-foreground font-semibold text-base mt-3 mb-2">{props.children}</h4> },
+          li(props) {
+            return <li className="text-foreground">{props.children}</li>
+          },
+          ul(props) {
+            return <ul className="list-disc pl-5 text-foreground">{props.children}</ul>
+          },
+          ol(props) {
+            return <ol className="list-decimal pl-5 text-foreground">{props.children}</ol>
+          },
           pre(props: any) {
             const { children } = props;
             return <>{children}</>;
@@ -88,7 +113,7 @@ export function MarkdownRenderer({ text, linkedCitations, className }: MarkdownR
                 {String(children).replace(/\n$/, "")}
               </SyntaxHighlighter>
             ) : (
-              <code className={className}>{children}</code>
+              <code className={className ? `${className} text-foreground bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded-md` : "text-foreground bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded-md"}>{children}</code>
             );
           },
         }}

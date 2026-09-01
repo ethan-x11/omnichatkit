@@ -34,6 +34,8 @@ export interface ChatLabels {
   reloadButton?: string;
   disclaimer: string | ReactNode;
   labelStyles?: LabelStyles;
+  userLabel?: string | ReactNode;
+  assistantLabel?: string | ReactNode;
 }
 
 export interface WelcomeScreenProps {}
@@ -70,10 +72,15 @@ export interface MessageContentStyles {
   containerStyle?: React.CSSProperties | string;
   bubbleStyle?: React.CSSProperties | string;
   alignment?: 'left' | 'right' | 'center';
+  badgeStyle?: BadgeStyles | string;
+}
+
+export interface AssistantMessageContentStyles extends MessageContentStyles {
+  subAgentBadgeStyle?: BadgeStyles | string;
 }
 
 export interface MessageStyles {
-  assistantMessageStyle?: React.CSSProperties | string | MessageContentStyles;
+  assistantMessageStyle?: React.CSSProperties | string | AssistantMessageContentStyles;
   userMessageStyle?: React.CSSProperties | string | MessageContentStyles;
   thinkingStepStyle?: React.CSSProperties | string;
   backgroundStyle?: React.CSSProperties | string;
@@ -97,8 +104,6 @@ export interface ChatManagerComponentStyles {
   inputSectionStyle?: InputStyles;
   headerStyle?: HeaderStyles;
   backgroundStyle?: React.CSSProperties | string;
-  agentBadgeStyle?: BadgeStyles | string;
-  userBadgeStyle?: BadgeStyles | string;
 }
 
 export type ChatManagerBaseProps = {

@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
 const renderBadge = (
-  text: string, 
+  text: string | React.ReactNode, 
   styleProp?: any, 
   defaultContainerClass?: string, 
   defaultTextClass?: string,
@@ -76,9 +76,7 @@ export function ChatManager({
     messageStyle = {},
     inputSectionStyle = {},
     headerStyle = {},
-    backgroundStyle: globalBackgroundStyle,
-    agentBadgeStyle,
-    userBadgeStyle
+    backgroundStyle: globalBackgroundStyle
   } = chatManagerComponentStyles;
 
   const aiContext = React.useContext(AIChatContext);
@@ -321,7 +319,7 @@ export function ChatManager({
         {/* Primary Chat Feed */}
         <div className={`flex flex-col flex-1 h-full min-w-0 ${layout === 'split' && useA2UI ? 'border-r border-inherit' : ''}`}>
           <div 
-            className={cn("flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
+            className={cn("flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
             style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
           >
             {messages.length === 0 && welcomeScreen && (
@@ -393,11 +391,13 @@ export function ChatManager({
               let bubbleStyleClass = '';
               let bubbleStyleObj: React.CSSProperties | undefined = undefined;
               let alignment: 'left' | 'right' | 'center' | undefined = undefined;
+              let badgeStyleRaw: any = undefined;
+              let subAgentBadgeStyleRaw: any = undefined;
 
               if (typeof customStyleRaw === 'string') {
                 containerStyleClass = customStyleRaw;
               } else if (typeof customStyleRaw === 'object' && customStyleRaw !== null) {
-                if ('containerStyle' in customStyleRaw || 'bubbleStyle' in customStyleRaw || 'alignment' in customStyleRaw) {
+                if ('containerStyle' in customStyleRaw || 'bubbleStyle' in customStyleRaw || 'alignment' in customStyleRaw || 'badgeStyle' in customStyleRaw || 'subAgentBadgeStyle' in customStyleRaw) {
                   const styleDef = customStyleRaw as any;
                   containerStyleClass = typeof styleDef.containerStyle === 'string' ? styleDef.containerStyle : '';
                   containerStyleObj = typeof styleDef.containerStyle === 'object' ? styleDef.containerStyle : undefined;
@@ -406,6 +406,8 @@ export function ChatManager({
                   bubbleStyleObj = typeof styleDef.bubbleStyle === 'object' ? styleDef.bubbleStyle : undefined;
 
                   alignment = styleDef.alignment;
+                  badgeStyleRaw = styleDef.badgeStyle;
+                  subAgentBadgeStyleRaw = styleDef.subAgentBadgeStyle;
                 } else {
                   containerStyleObj = customStyleRaw as React.CSSProperties;
                 }
@@ -413,7 +415,7 @@ export function ChatManager({
 
               if (isUser) {
                 if (!bubbleStyleClass && !bubbleStyleObj) {
-                  bubbleStyleClass = "bg-white dark:bg-zinc-800 shadow-sm border border-zinc-200 dark:border-zinc-700 rounded-2xl rounded-tr-sm px-4 py-2";
+                  bubbleStyleClass = "bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 text-foreground shadow-sm dark:shadow-zinc-700/50 rounded-2xl px-4 py-2";
                 }
                 if (!alignment) alignment = 'right';
               } else {
@@ -450,13 +452,13 @@ export function ChatManager({
                   {(mainContent || thinkingContent || (!thinkingContent && !hasTool)) && (
                     <div className="font-bold mb-2 flex items-center gap-2 min-w-0 max-w-full">
                       {isUser ? (
-                        renderBadge('You', userBadgeStyle, "flex items-center gap-1", "", <User size={14} />)
+                        renderBadge(labels.userLabel ?? 'You', badgeStyleRaw, "flex items-center gap-1", "", <User size={14} />)
                       ) : (
                         <>
-                          {renderBadge('AI', agentBadgeStyle && !messageToAgentMap.get(msg.id) ? agentBadgeStyle : undefined, "flex items-center gap-1", "", <Bot size={14} />)}
+                          {renderBadge(labels.assistantLabel ?? 'AI', badgeStyleRaw, "flex items-center gap-1", "", <Bot size={14} />)}
                           {messageToAgentMap.get(msg.id) && renderBadge(
                             messageToAgentMap.get(msg.id) as string, 
-                            agentBadgeStyle, 
+                            subAgentBadgeStyleRaw, 
                             "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1", 
                             "text-zinc-700 dark:text-zinc-300",
                             <Bot size={12} />
@@ -480,36 +482,40 @@ export function ChatManager({
                     </details>
                   )}
                   
+                  
                   {(mainContent || (!thinkingContent && !hasTool)) ? (
                     <div className="mt-1 flex flex-col relative min-w-0 max-w-full">
                       <div 
-                        className={cn("relative z-10 break-all whitespace-pre-wrap min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass)} 
+                        className={cn("relative z-10 break-all min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass)} 
                         style={{
                           ...bubbleStyleObj,
                           ...(alignment === 'right' ? { borderBottomRightRadius: '4px' } : {}),
                           ...(alignment === 'left' ? { borderBottomLeftRadius: '4px' } : {})
                         }}
                       >
-                        <MarkdownRenderer text={mainContent} />
+                        <MarkdownRenderer 
+                          text={mainContent} 
+                        />
+                      </div>
+                      <div className={cn(
+                        "opacity-0 group-hover:opacity-100 transition-opacity flex mt-1",
+                        alignment === 'right' ? 'justify-end' : 'justify-start'
+                      )}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon-sm" 
+                          className="h-6 w-6 text-muted-foreground hover:text-foreground" 
+                          onClick={() => handleCopy(msg.id, msg.content)}
+                          title="Copy message"
+                        >
+                          {copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                        </Button>
                       </div>
                     </div>
                   ) : null}
                   
-                  <Button 
-                    variant="ghost" 
-                    size="icon-sm" 
-                    className={cn(
-                      "absolute top-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 text-muted-foreground hover:text-foreground",
-                      alignment === 'right' ? 'left-0' : 'right-0'
-                    )} 
-                    onClick={() => handleCopy(msg.id, msg.content)}
-                    title="Copy message"
-                  >
-                    {copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-                  </Button>
-                  
                   {hasTool && (
-                    <div className="mt-3 flex flex-col gap-2">
+                    <div className="mt-3 flex flex-col gap-2 w-full min-w-0 max-w-full">
                       {msg.toolInvocations?.map((tool: any) => {
                         if (useA2UI && layout === 'inline' && tool.toolName === a2uiToolName) {
                           return (
@@ -532,7 +538,7 @@ export function ChatManager({
                                   Tool Call: {tool.toolName}
                                   {messageToAgentMap.get(tool.toolCallId) && renderBadge(
                                     messageToAgentMap.get(tool.toolCallId) as string,
-                                    agentBadgeStyle,
+                                    subAgentBadgeStyleRaw,
                                     "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1 ml-2",
                                     "text-zinc-700 dark:text-zinc-300",
                                     <Bot size={12} />
@@ -542,7 +548,7 @@ export function ChatManager({
                               <ChevronDown size={14} className="transition-transform duration-200 group-open:rotate-180 opacity-50" />
                             </summary>
                             <div className="p-3 border border-t-0 border-zinc-200 dark:border-zinc-800 rounded-b-md bg-zinc-50/50 dark:bg-zinc-900/25 -mt-2 pt-4">
-                              <div className="overflow-hidden rounded-md text-xs">
+                              <div className="overflow-x-auto rounded-md text-xs">
                                 <MarkdownRenderer text={`\`\`\`json\n${typeof tool.args === 'string' ? tool.args : JSON.stringify(tool.args, null, 2)}\n\`\`\``} />
                               </div>
                               {tool.result && (
@@ -550,7 +556,7 @@ export function ChatManager({
                                   <div className="text-green-600 dark:text-green-400 font-medium mb-1 flex items-center gap-1">
                                     <CheckCircle2 size={12} /> Result
                                   </div>
-                                  <div className="overflow-hidden rounded-md text-xs [&_.prose]:text-zinc-700 dark:[&_.prose]:text-zinc-300">
+                                  <div className="overflow-x-auto rounded-md text-xs [&_.prose]:text-zinc-700 dark:[&_.prose]:text-zinc-300">
                                     <MarkdownRenderer text={`\`\`\`json\n${typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)}\n\`\`\``} />
                                   </div>
                                 </div>
