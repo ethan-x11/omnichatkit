@@ -8,7 +8,6 @@ OmniChatKit is a comprehensive, modular React component library designed for bui
 OmniChatKit comes with a fully bundled set of pre-styled Shadcn components, meaning you can drop it into any Next.js or React application without having to copy-paste or maintain UI primitives.
 
 ## Features
-
 - 🔌 **Dual Protocol Support**: Choose between Vercel's standard Data Stream Protocol (`useChat`) or the advanced AG-UI Protocol (`@ag-ui/client`).
 - 🎨 **Self-Contained UI**: Bundles 60+ customized Shadcn/Radix components internally (using `@base-ui/react` and Tailwind CSS).
 - 🧩 **Generative UI (A2UI)**: Native support for rendering complex, interactive components dynamically via the `A2UICanvas` and a built-in catalog registry.
@@ -17,6 +16,7 @@ OmniChatKit comes with a fully bundled set of pre-styled Shadcn components, mean
 - 🧠 **Native Reasoning Support**: Automatically extracts and beautifully renders `<think>` tags (e.g., from DeepSeek R1) as collapsible reasoning blocks.
 - 🚦 **Advanced Interaction Control**: Built-in hooks for Human-in-the-Loop (HITL) workflows (`useHITL`) and streaming interrupts (`useInterrupts`).
 - 📡 **Event Bus**: A lightweight `surface-bus.ts` to manage cross-component messaging and lifecycle events.
+- 🔁 **Auto Context Hook**: `useChatContext` automatically resolves the correct chat context (classic or ag-ui) without prop-drilling.
 
 ## Installation
 
@@ -48,7 +48,7 @@ import { OmniChat, SessionManager } from 'omnichatkit';
 export default function ChatPage() {
   return (
     <OmniChat 
-      api_mode="ag-ui" // "ag-ui" or "vercel"
+      api_mode="ag-ui" // "ag-ui" or "classic"
       apiRoute="/api/agent"
       a2uiRenderingOption="detached" // "detached" (split pane) or "chat" (inline)
       useA2UI={true}
@@ -96,7 +96,7 @@ export default function ChatPage() {
 
 Depending on your `api_mode`, you need to set up your backend endpoint.
 
-#### Vercel AI SDK Route (`api_mode="vercel"`)
+#### Vercel AI SDK Route (`api_mode="classic"`)
 ```typescript
 // app/api/chat/route.ts
 import { streamText } from 'ai';
@@ -135,11 +135,40 @@ The `ChatManager` component comes with extensive styling and layout capabilities
 - **`position`** (`"left" | "right" | "top" | "bottom"`): Controls where the drawer docks and automatically aligns the close button correctly.
 - **`welcomeScreen`** (`boolean | ReactNode`): Set to `true` (default) to show the default welcome screen, or pass a custom React element.
 - **`maxInputCharacter`** (`number`): Optional limit for the maximum number of characters allowed in the chat input box.
+- **`streaming`** (`boolean`): Enable or disable streaming for responses. When set, this flag is forwarded to the backend via the request body. Omit to let the backend decide.
 - **`promptChips`** (`PromptChips`): Render actionable chips above the input box (e.g., for suggested questions or starter prompts). Includes a `promptChipList` (title, hoverText, prompt) and an `alwaysShow` boolean flag.
 - **`toggleButtonProps`** (`object`): Deep customization for the collapse/expand trigger button (replaces old `toggleButtonStyle`).
   - `toggleButtonStyle`: Overall button container styles.
   - `toggleButtonIconProps`: Nested object for `{ toggleButtonIcon, toggleButtonIconStyle }`. By default, renders a `MessageCircle` icon.
   - `toggleButtonLabelProps`: Nested object for `{ toggleButtonLabel, toggleButtonLabelStyle }` to add text alongside the icon.
+
+#### Streaming Toggle
+
+Use the `streaming` prop to explicitly control whether responses are streamed:
+
+```tsx
+{/* Disable streaming â€” receive the full response at once */}
+<ChatManager streaming={false} useA2UI={false} a2uiToolName="" />
+
+{/* Force streaming on (default behavior for most backends) */}
+<ChatManager streaming={true} useA2UI={false} a2uiToolName="" />
+
+{/* Omit the prop entirely to let the backend decide */}
+<ChatManager useA2UI={false} a2uiToolName="" />
+```
+
+The `streaming` flag is forwarded in the request body (`{ streaming: true|false }`) on every message send, including prompt chip clicks. Your API route can read and act on this:
+
+```typescript
+export async function POST(req: Request) {
+  const { messages, streaming } = await req.json();
+  const result = streamText({ model: openai('gpt-4o'), messages });
+  return streaming === false
+    ? result.toTextResponse()
+    : result.toDataStreamResponse();
+}
+```
+
 #### Component Styling (`chatManagerComponentStyles`)
 You can deeply customize the appearance of the ChatManager by passing nested style objects. We support `backgroundStyle` for all major layout sections, as well as advanced message and badge styling:
 
@@ -239,7 +268,39 @@ Use `sessionManagerComponentStyles.listStyle` to replace the list icons or style
 />
 ```
 
-### 6. Working with AI Reasoning (e.g. DeepSeek `<think>`)
+### 6. `useChatContext` â€” Auto Context Hook
+
+`useChatContext` is a convenience hook that automatically resolves the correct chat context based on whichever provider (`AIChatProvider` or `AGUIChatProvider`) is present in the React tree. Use it instead of calling `useAIChatContext` or `useAGUIChatContext` directly.
+
+```tsx
+import { useChatContext } from 'omnichatkit';
+
+function MyCustomChatUI() {
+  const { messages, append, status, stop } = useChatContext();
+
+  return (
+    <div>
+      {messages.map(m => <p key={m.id}>{m.content}</p>)}
+      <button onClick={() => append({ role: 'user', content: 'Hello!' })}>
+        Send
+      </button>
+      {status === 'streaming' && (
+        <button onClick={stop}>Stop</button>
+      )}
+    </div>
+  );
+}
+```
+
+**Resolution logic:**
+1. **Only one provider in the tree** â†’ returns that context directly. No store lookup needed.
+2. **Both providers present** â†’ uses the `api_mode` registered by `<OmniChat>` as a tiebreaker.
+3. **Neither present** â†’ throws a descriptive error.
+
+> [!NOTE]
+> `useChatContext` is safe to use immediately on first render. It reads context values synchronously from the React tree rather than relying on the store's `apiMode` value, which is set via `useEffect` and would not be available on the initial render.
+
+### 7. Working with AI Reasoning (e.g. DeepSeek `<think>`)
 OmniChatKit automatically parses and extracts `<think>` tags from incoming model streams. It strips these out of the primary text response and renders them natively as a beautiful, collapsible "Reasoning" accordion inside the message block! No extra configuration is required.
 
 ---
@@ -253,6 +314,8 @@ OmniChatKit abstracts the chat stream state into a global Zustand store. Both `A
 
 ### 2. A2UI Canvas & Catalog
 The `A2UICanvas` listens for specific tool invocations from the LLM and dynamically renders registered React components. You can pass your own custom components via the `catalog` prop on the provider, or rely on the robust default catalog bundled within OmniChatKit.
+
+Tool invocations are read from the Vercel AI SDK's `message.parts` array (using `ToolInvocationUIPart` entries) with a transparent fallback to `message.toolInvocations` for AG-UI messages that predate the `parts` API.
 
 ### 3. Pre-bundled UI Primitives
 Unlike traditional Shadcn implementations that require you to copy source code into your repository, OmniChatKit pre-bundles everything inside `src/components/ui`. This includes highly customized versions of `Button`, `Input`, `ScrollArea`, `Sheet`, and 50+ other components tailored for chat interfaces.
@@ -270,6 +333,9 @@ OmniChatKit exports all necessary hooks, components, and types to give you full 
 
 **Hooks**
 - `useAIChatStore`
+- `useChatContext` â€” auto-selects the correct context based on the active provider
+- `useAIChatContext` â€” explicit classic (Vercel AI SDK) context accessor
+- `useAGUIChatContext` â€” explicit AG-UI context accessor
 - `useAGUIChat`
 - `useHITL`
 - `useInterrupts`
@@ -299,3 +365,4 @@ npm run lint
 ## License
 
 Apache-2.0 
+
