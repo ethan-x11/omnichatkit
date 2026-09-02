@@ -101,7 +101,8 @@ export const definitions = {
     description: "Render image from URL.",
     props: z.object({
       url: stringOrPath,
-      fit: z.enum(["cover", "contain", "fill", "none", "scale-down"]).optional(),
+      description: stringOrPath.optional(),
+      fit: z.enum(["cover", "contain", "fill", "none", "scaleDown"]).optional(),
       variant: z.string().optional(),
     }),
   },
@@ -109,7 +110,7 @@ export const definitions = {
   Icon: {
     description: "Render system icons.",
     props: z.object({
-      name: stringOrPath,
+      name: z.union([stringOrPath, z.object({ svgPath: stringOrPath })]),
     }),
   },
 
@@ -142,7 +143,10 @@ export const definitions = {
   List: {
     description: "Render scrollable list.",
     props: z.object({
-      items: childrenRef,
+      children: childrenRef.optional(),
+      items: childrenRef.optional(),
+      direction: z.enum(["vertical", "horizontal"]).optional(),
+      align: z.enum(["start", "center", "end", "stretch"]).optional(),
     }),
   },
 
@@ -173,9 +177,10 @@ export const definitions = {
     description: "Input field supporting label, value, variant, and checks.",
     props: z.object({
       label: stringOrPath.optional(),
-      value: z.union([z.string(), z.object({ path: z.string() })]),
-      variant: z.enum(["shortText", "longText"]).optional(),
+      value: z.union([z.string(), z.object({ path: z.string() })]).optional(),
+      variant: z.enum(["shortText", "longText", "number", "obscured"]).optional(),
       checks: z.any().optional(),
+      validationRegexp: z.string().optional(),
     }),
   },
 
@@ -197,6 +202,18 @@ export const definitions = {
       value: z.union([z.number(), z.object({ path: z.string() })]),
       min: z.number().optional(),
       max: z.number().optional(),
+    }),
+  },
+
+  DateTimeInput: {
+    description: "Date/time picker.",
+    props: z.object({
+      value: stringOrPath.optional(),
+      label: stringOrPath.optional(),
+      enableDate: z.boolean().optional(),
+      enableTime: z.boolean().optional(),
+      min: stringOrPath.optional(),
+      max: stringOrPath.optional(),
     }),
   },
 

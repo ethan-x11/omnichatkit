@@ -218,6 +218,8 @@ export type ChatManagerBaseProps = {
   promptChips?: PromptChips;
   agentId?: string;
   sessionId?: string;
+  /** Tool name the AI uses to emit A2UI surface ops. Required to enable A2UI rendering. */
+  a2uiToolName?: string;
   a2uiPosition?: ComponentPosition; // Used when layout is 'split'
   collapsibleA2UI?: boolean; // Used when layout is 'split'
   maxInputCharacter?: number;
@@ -227,9 +229,6 @@ export type ChatManagerBaseProps = {
 export type ChatManagerProps = ChatManagerBaseProps & (
   | { display: 'floating'; collapsible?: never; isResizable?: never }
   | { display?: 'embedded'; collapsible?: boolean; isResizable?: boolean }
-) & (
-  | { useA2UI?: true; a2uiToolName: string }
-  | { useA2UI: false; a2uiToolName?: string }
 );
 
 export interface SessionListStyles {
@@ -292,7 +291,7 @@ export interface SessionManagerProps {
 type OmniChatBaseProps = {
   theme?: ChatTheme;
   apiEndpoint?: string;
-  chatManagerProps?: Omit<Partial<ChatManagerProps>, 'theme' | 'useA2UI' | 'layout' | 'a2uiToolName'>;
+  chatManagerProps?: Omit<Partial<ChatManagerProps>, 'theme' | 'layout'>;
   sessionStorageMode?: StorageMode;
   sessionRoute?: string;
   children?: ReactNode;

@@ -1272,20 +1272,34 @@ const ReportGenerationCard = ({ props }: RendererProps<{ report_id?: string; rep
   );
 };
 
-const Image = ({ props }: RendererProps<{ url: string; fit?: "cover" | "contain" | "fill" | "none" | "scale-down"; variant?: string }>) => (
-  <img src={props.url} alt="" className={clsx("w-full h-auto rounded-[var(--radius)]", props.fit ? `object-${props.fit}` : "object-cover", props.variant)} />
+const Image = ({ props }: RendererProps<{ url: string; description?: string; fit?: string; variant?: string }>) => (
+  <img
+    src={props.url}
+    alt={props.description || ""}
+    className={clsx(
+      "w-full h-auto rounded-[var(--radius)]",
+      props.fit === 'scaleDown' ? 'object-scale-down'
+        : props.fit ? `object-${props.fit}`
+        : 'object-cover',
+    )}
+  />
 );
 
-const Icon = ({ props }: RendererProps<{ name: string }>) => {
-  let name = (props.name || "").trim();
-  // Convert camelCase to snake_case
-  name = name.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
-  
-  // Handle specific typos/aliases
-  if (name === "attachfile") name = "attach_file";
-  else if (name === "arrowright") name = "arrow_right";
-  else if (name === "arrowleft") name = "arrow_left";
-  
+const Icon = ({ props }: RendererProps<{ name: string | { svgPath: string } }>) => {
+  // Handle svgPath object variant from the basic catalog spec
+  if (props.name && typeof props.name === 'object' && 'svgPath' in props.name) {
+    return (
+      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current text-[var(--ink)]">
+        <path d={(props.name as { svgPath: string }).svgPath} />
+      </svg>
+    );
+  }
+  let name = (typeof props.name === 'string' ? props.name : '').trim();
+  // Convert camelCase icon names to snake_case for Material Symbols
+  name = name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+  if (name === 'attachfile') name = 'attach_file';
+  else if (name === 'arrowright') name = 'arrow_right';
+  else if (name === 'arrowleft') name = 'arrow_left';
   return <span className="material-symbols-outlined text-[var(--ink)]">{name}</span>;
 };
 
@@ -1300,11 +1314,17 @@ const AudioPlayer = ({ props }: RendererProps<{ url: string; description?: strin
   </div>
 );
 
-const Column = ({ props, children }: RendererProps<{ children: string[]; gap?: keyof typeof GAP; justify?: keyof typeof JUSTIFY; align?: keyof typeof ALIGN; weight?: number[] }>) => (
-  <div className={clsx("flex flex-col", GAP[props.gap ?? "md"], props.justify && JUSTIFY[props.justify], props.align && ALIGN[props.align])}>
+const Column = ({ props, children }: RendererProps<{
+  children: string[] | { componentId: string; path: string };
+  gap?: keyof typeof GAP;
+  justify?: keyof typeof JUSTIFY;
+  align?: keyof typeof ALIGN;
+  weight?: number[];
+}>) => (
+  <div className={clsx('flex flex-col', GAP[props.gap ?? 'md'], props.justify && JUSTIFY[props.justify], props.align && ALIGN[props.align])}>
     {Array.isArray(props.children)
       ? props.children.map((id, i) => (
-          <div key={id} style={{ flexGrow: props.weight?.[i] ?? 0 }} className={props.weight?.[i] ? "flex flex-col" : undefined}>
+          <div key={id} style={{ flexGrow: (props.weight as number[] | undefined)?.[i] ?? 0 }} className={(props.weight as number[] | undefined)?.[i] ? 'flex flex-col' : undefined}>
             {children(id)}
           </div>
         ))
@@ -1312,17 +1332,42 @@ const Column = ({ props, children }: RendererProps<{ children: string[]; gap?: k
   </div>
 );
 
-const List = ({ props, children }: RendererProps<{ items: string[] }>) => (
-  <div className="flex flex-col overflow-y-auto max-h-[400px] border border-[var(--line)] rounded-[var(--radius)] bg-[var(--surface)]">
-    {Array.isArray(props.items)
-      ? props.items.map((id) => (
-          <div key={id} className="border-b border-[var(--line)] last:border-b-0 p-3 hover:bg-[var(--surface-soft)] transition-colors">
-            {children(id)}
-          </div>
-        ))
-      : null}
-  </div>
-);
+/**
+ * List — renders an array of child component IDs as a vertical scrollable list.
+ * The basic catalog spec uses `children` (array of IDs); this renderer also
+ * accepts `items` as a fallback alias for backward-compatibility.
+ */
+const List = ({
+  props,
+  children,
+}: RendererProps<{
+  children?: string[] | { componentId: string; path: string };
+  items?: string[];
+  direction?: 'vertical' | 'horizontal';
+  align?: keyof typeof ALIGN;
+}>) => {
+  const ids = Array.isArray(props.children)
+    ? (props.children as string[])
+    : Array.isArray(props.items)
+    ? props.items
+    : [];
+  const isHorizontal = props.direction === 'horizontal';
+  return (
+    <div
+      className={clsx(
+        isHorizontal ? 'flex flex-row flex-wrap' : 'flex flex-col',
+        'overflow-y-auto max-h-[400px] border border-[var(--line)] rounded-[var(--radius)] bg-[var(--surface)]',
+        props.align && ALIGN[props.align],
+      )}
+    >
+      {ids.map((id) => (
+        <div key={id} className="border-b border-[var(--line)] last:border-b-0 p-3 hover:bg-[var(--surface-soft)] transition-colors">
+          {children(id)}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const Tabs = ({ props, children }: RendererProps<{ tabs: { title: string; child: string }[] }>) => {
   if (!Array.isArray(props.tabs) || props.tabs.length === 0) return null;
@@ -1392,32 +1437,43 @@ const CheckBox = ({ props, dispatch }: RendererProps<{ label?: string; value: bo
   );
 };
 
-const TextField = ({ props, dispatch }: RendererProps<{ label?: string; value: string; variant?: "shortText" | "longText"; checks?: any }>) => {
-  const [localValue, setLocalValue] = React.useState(props.value || "");
-  React.useEffect(() => { setLocalValue(props.value || ""); }, [props.value]);
+const TextField = ({
+  props,
+  dispatch,
+}: RendererProps<{
+  label?: string;
+  value?: string;
+  variant?: 'shortText' | 'longText' | 'number' | 'obscured';
+  checks?: any;
+  validationRegexp?: string;
+}>) => {
+  const [localValue, setLocalValue] = React.useState(props.value || '');
+  React.useEffect(() => { setLocalValue(props.value || ''); }, [props.value]);
   const id = React.useId();
+  const isTextarea = props.variant === 'longText';
+  const inputType = props.variant === 'obscured' ? 'password' : props.variant === 'number' ? 'number' : 'text';
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
       {props.label && <UILabel htmlFor={id} className="text-[13px] font-medium text-[var(--ink)]">{props.label}</UILabel>}
-      {props.variant === "longText" ? (
+      {isTextarea ? (
         <UITextarea
           id={id}
           value={localValue}
           onChange={(e) => {
             setLocalValue(e.target.value);
-            dispatch?.({ type: "set", value: e.target.value } as never);
+            dispatch?.({ type: 'set', value: e.target.value } as never);
           }}
           className="w-full rounded-[var(--radius)] border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2 text-[13px] text-[var(--ink)] focus-visible:ring-1 focus-visible:ring-[var(--lilac)] focus-visible:border-[var(--lilac)] min-h-[100px] transition-colors"
         />
       ) : (
         <UIInput
           id={id}
-          type="text"
+          type={inputType}
           value={localValue}
           onChange={(e) => {
             setLocalValue(e.target.value);
-            dispatch?.({ type: "set", value: e.target.value } as never);
+            dispatch?.({ type: 'set', value: e.target.value } as never);
           }}
           className="w-full rounded-[var(--radius)] border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2.5 text-[13px] text-[var(--ink)] focus-visible:ring-1 focus-visible:ring-[var(--lilac)] focus-visible:border-[var(--lilac)] transition-colors"
         />
@@ -1498,12 +1554,8 @@ const Slider = ({ props, dispatch }: RendererProps<{ value: number; min?: number
   return (
     <div className="flex flex-col gap-2 w-full mt-1">
       <div className="flex justify-between items-center w-full">
-        <span className="text-[13px] font-medium text-[var(--ink)]">
-          {props.label}
-        </span>
-        <span className="text-[14px] font-bold text-[var(--ink)]">
-          {localValue}
-        </span>
+        <span className="text-[13px] font-medium text-[var(--ink)]">{props.label}</span>
+        <span className="text-[14px] font-bold text-[var(--ink)]">{localValue}</span>
       </div>
       <UISlider
         min={min}
@@ -1511,10 +1563,11 @@ const Slider = ({ props, dispatch }: RendererProps<{ value: number; min?: number
         step={1}
         value={[localValue]}
         onValueChange={(vals) => {
-          setLocalValue(typeof vals === "number" ? vals : vals[0]);
+          setLocalValue(typeof vals === 'number' ? vals : vals[0]);
         }}
         onValueCommitted={(vals) => {
-          dispatch?.({ type: "set", value: typeof vals === "number" ? vals : vals[0] } as never);
+          const v = typeof vals === 'number' ? vals : vals[0];
+          dispatch?.({ type: 'set', value: v } as never);
         }}
         className="w-full cursor-pointer mt-1"
       />
@@ -1522,6 +1575,51 @@ const Slider = ({ props, dispatch }: RendererProps<{ value: number; min?: number
         <span>{min}</span>
         <span>{max}</span>
       </div>
+    </div>
+  );
+};
+
+/**
+ * DateTimeInput — A2UI basic catalog date/time picker.
+ * Supports date-only, time-only, or combined date+time modes.
+ */
+const DateTimeInput = ({
+  props,
+  dispatch,
+}: RendererProps<{
+  value?: string;
+  label?: string;
+  enableDate?: boolean;
+  enableTime?: boolean;
+  min?: string;
+  max?: string;
+}>) => {
+  const enableDate = props.enableDate ?? false;
+  const enableTime = props.enableTime ?? false;
+  const inputType = enableDate && enableTime ? 'datetime-local' : enableDate ? 'date' : 'time';
+  const [localValue, setLocalValue] = React.useState(props.value || '');
+  React.useEffect(() => { setLocalValue(props.value || ''); }, [props.value]);
+  const id = React.useId();
+
+  return (
+    <div className="flex flex-col gap-1.5 w-full">
+      {props.label && (
+        <UILabel htmlFor={id} className="text-[13px] font-medium text-[var(--ink)]">
+          {props.label}
+        </UILabel>
+      )}
+      <UIInput
+        id={id}
+        type={inputType}
+        value={localValue}
+        min={props.min}
+        max={props.max}
+        onChange={(e) => {
+          setLocalValue(e.target.value);
+          dispatch?.({ type: 'set', value: e.target.value } as never);
+        }}
+        className="w-full rounded-[var(--radius)] border border-[var(--line)] bg-[var(--surface-soft)] px-3 py-2.5 text-[13px] text-[var(--ink)] focus-visible:ring-1 focus-visible:ring-[var(--lilac)] focus-visible:border-[var(--lilac)] transition-colors"
+      />
     </div>
   );
 };
@@ -1623,4 +1721,5 @@ export const renderers = {
   TextField,
   ChoicePicker,
   Slider,
+  DateTimeInput,
 };

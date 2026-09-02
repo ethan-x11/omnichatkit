@@ -48,9 +48,35 @@ const renderBadge = (
   );
 };
 
+/**
+ * Inline status pill shown in the message list when an A2UI tool call is detected.
+ * The actual rendered surface lives in the pinned A2UICanvas pane below the feed.
+ */
+function A2UIToolPill({
+  tool,
+}: {
+  tool: any;
+  agentId?: string;
+}) {
+  const isComplete = !!tool.result;
+  return (
+    <div
+      className="my-1 inline-flex items-center gap-2 max-w-fit px-3 py-2 rounded-full border border-border bg-muted/40 text-xs font-medium text-muted-foreground"
+    >
+      {isComplete ? (
+        <svg className="w-3 h-3 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+      ) : (
+        <svg className="w-3 h-3 animate-spin shrink-0" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+      )}
+      <span className="uppercase tracking-widest text-[10px]">surface</span>
+      <span className="opacity-40">→</span>
+      <span>{isComplete ? 'rendered in canvas' : 'generating…'}</span>
+    </div>
+  );
+}
+
 export function ChatManager({
   theme,
-  useA2UI = true,
   layout = 'split',
   className,
   style,
@@ -68,6 +94,7 @@ export function ChatManager({
   labels = {},
   promptChips,
   agentId,
+  a2uiToolName,
   a2uiPosition = 'left',
   collapsibleA2UI = false,
   maxInputCharacter,
@@ -113,8 +140,9 @@ export function ChatManager({
       });
     }
   }, [activeSessionId, context?.messages, sessionsEnabled, updateSessionMessages]);
-  const a2uiToolName = useAIChatStore((state) => state.a2uiToolName);
   const isLoading = status === 'submitted' || status === 'streaming';
+  // Whether A2UI canvas is active for this manager instance
+  const hasA2UI = !!a2uiToolName;
   const globalTheme = useAIChatStore((state) => state.theme);
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [isA2UIOpen, setIsA2UIOpen] = useState(false);
@@ -321,7 +349,7 @@ export function ChatManager({
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Primary Chat Feed */}
-        <div className={`flex flex-col flex-1 h-full min-w-0 ${layout === 'split' && useA2UI ? 'border-r border-inherit' : ''}`}>
+        <div className={`flex flex-col flex-1 h-full min-w-0 ${layout === 'split' && hasA2UI ? 'border-r border-inherit' : ''}`}>
           <div
             className={cn("flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
             style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
@@ -554,9 +582,15 @@ export function ChatManager({
                   {hasTool && (
                     <div className="mt-3 flex flex-col gap-2 w-full min-w-0 max-w-full">
                       {toolInvocations.map((tool: any) => {
-                        if (useA2UI && layout === 'inline' && tool.toolName === a2uiToolName) {
+                        // When layout is 'inline' and this is an A2UI tool call,
+                        // push the ops to the surface bus and show a status pill.
+                        // The actual canvas is rendered once below the message feed.
+                        if (layout === 'inline' && hasA2UI && tool.toolName === a2uiToolName) {
                           return (
-                            <A2UICanvas
+                            <A2UIToolPill
+                              key={tool.toolCallId}
+                              tool={tool}
+                              agentId={agentId}
                             />
                           );
                         }
@@ -733,18 +767,30 @@ export function ChatManager({
           </form>
         </div>
 
+        {/* Inline A2UI Canvas Pane — pinned below the message feed when layout='inline' */}
+        {layout === 'inline' && hasA2UI && a2uiToolName && (
+          <div className="border-t border-inherit shrink-0 max-h-[40%] overflow-y-auto p-4">
+            <A2UICanvas
+              agentId={agentId ?? 'default'}
+              a2uiToolName={a2uiToolName}
+            />
+          </div>
+        )}
+
         {/* Split A2UI Canvas Pane */}
-        {useA2UI && layout === 'split' && !collapsibleA2UI && (
+        {layout === 'split' && hasA2UI && a2uiToolName && !collapsibleA2UI && (
           <div className="w-1/2 h-full bg-inherit overflow-y-auto p-4 relative shrink-0">
-            {/* Renders the latest UI component requested by the AI in the split pane */}
-            <A2UICanvas />
+            <A2UICanvas
+              agentId={agentId ?? 'default'}
+              a2uiToolName={a2uiToolName}
+            />
           </div>
         )}
       </div>
     </div>
   );
 
-  const a2uiSheetContent = useA2UI && layout === 'split' && collapsibleA2UI ? (
+  const a2uiSheetContent = layout === 'split' && hasA2UI && a2uiToolName && collapsibleA2UI ? (
     <Sheet open={isA2UIOpen} onOpenChange={setIsA2UIOpen}>
       <SheetTrigger
         render={
@@ -765,7 +811,10 @@ export function ChatManager({
             )}
           </SheetHeader>
           <div className="flex-1 overflow-y-auto p-4 relative">
-            <A2UICanvas />
+            <A2UICanvas
+              agentId={agentId ?? 'default'}
+              a2uiToolName={a2uiToolName}
+            />
           </div>
         </div>
       </SheetContent>
