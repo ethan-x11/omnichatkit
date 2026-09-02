@@ -254,6 +254,7 @@ The `ChatManager` component comes with extensive styling and layout capabilities
 - **`position`** (`"left" | "right" | "top" | "bottom"`): Controls where the drawer docks and automatically aligns the close button correctly.
 - **`welcomeScreen`** (`boolean | ReactNode`): Set to `true` (default) to show the default welcome screen, or pass a custom React element.
 - **`maxInputCharacter`** (`number`): Optional limit for the maximum number of characters allowed in the chat input box.
+- **`autoScroll`** (`boolean`): Automatically scrolls the chat feed to the bottom when new messages arrive. Defaults to `true`. Scrolling up manually will pause auto-scroll and show a "Scroll to bottom" button.
 - **`streaming`** (`boolean`): Enable or disable streaming for responses. When set, this flag is forwarded to the backend via the request body. Omit to let the backend decide.
 - **`promptChips`** (`PromptChips`): Render actionable chips above the input box (e.g., for suggested questions or starter prompts). Includes a `promptChipList` (title, hoverText, prompt) and an `alwaysShow` boolean flag.
 - **`toggleButtonProps`** (`object`): Deep customization for the collapse/expand trigger button (replaces old `toggleButtonStyle`).
@@ -335,6 +336,10 @@ import { User, Bot } from 'lucide-react';
       promptChipContainerStyle: "pt-4 gap-2 border-t-slate-800",
       promptChipTitleStyle: "bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-full border border-slate-700",
       promptChipHoverTextStyle: "transition-colors"
+    },
+    // Customize the "Scroll to bottom" button (appears when auto-scroll is interrupted)
+    scrollButtonStyles: {
+      iconStyles: "text-slate-300",
     },
     inputSectionStyle: {
       backgroundStyle: "bg-slate-950",

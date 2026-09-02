@@ -10,8 +10,9 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from './ui/sheet';
+import { Skeleton } from './ui/skeleton';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from './ui/dialog';
-import { MessageCircle, PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, Copy, Check, Square, Brain, Wrench, Activity, AlertCircle, PlayCircle, CheckCircle2, User, Bot } from 'lucide-react';
+import { MessageCircle, PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, Copy, Check, Square, Brain, Wrench, Activity, AlertCircle, PlayCircle, CheckCircle2, User, Bot, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
@@ -103,6 +104,7 @@ export function ChatManager({
     messageStyle = {},
     inputSectionStyle = {},
     headerStyle = {},
+    scrollButtonStyles = {},
     backgroundStyle: globalBackgroundStyle
   } = chatManagerComponentStyles;
 
@@ -212,12 +214,30 @@ export function ChatManager({
   const isSheet = !isFloating && !isEmbedded && collapsible;
   const isEmbeddedCollapsible = isEmbedded && collapsible;
 
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const [isHydrated, setIsHydrated] = React.useState(false);
   React.useEffect(() => {
-    if (autoScroll) {
+    setIsHydrated(true);
+  }, []);
+
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const [userScrolledUp, setUserScrolledUp] = React.useState(false);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    // Allow a 50px threshold to determine if we are at the bottom
+    const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 50;
+    if (isAtBottom && userScrolledUp) {
+      setUserScrolledUp(false);
+    } else if (!isAtBottom && !userScrolledUp) {
+      setUserScrolledUp(true);
+    }
+  };
+
+  React.useEffect(() => {
+    if (autoScroll && !userScrolledUp) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, autoScroll]);
+  }, [messages, autoScroll, userScrolledUp]);
 
   const handleFormSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     const options = streaming !== undefined ? { body: { streaming } } : undefined;
@@ -287,6 +307,30 @@ export function ChatManager({
     />
   ) : null;
 
+  if (!isHydrated) {
+    if (isFloating || isSheet || isEmbeddedCollapsible) {
+      return null;
+    }
+    return (
+      <div
+        className={cn(`flex border rounded-xl flex-col relative ${chatContainerClass} ${sizeClass}`, typeof globalBackgroundStyle === 'string' ? globalBackgroundStyle : "", className)}
+        style={{ ...(typeof globalBackgroundStyle === 'object' ? globalBackgroundStyle : {}), ...combinedStyle }}
+      >
+        <div className="p-4 border-b flex items-center justify-between">
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <div className="flex-1 p-6 space-y-6 flex flex-col justify-end">
+          <Skeleton className="h-16 w-3/4 rounded-2xl self-end" />
+          <Skeleton className="h-20 w-3/4 rounded-2xl self-start" />
+          <Skeleton className="h-16 w-2/3 rounded-2xl self-end" />
+        </div>
+        <div className="p-4 border-t">
+          <Skeleton className="h-12 w-full rounded-md" />
+        </div>
+      </div>
+    );
+  }
+
   const innerContent = (
     <div
       className={cn(`flex border rounded-xl flex-col relative ${chatContainerClass} ${sizeClass}`, typeof globalBackgroundStyle === 'string' ? globalBackgroundStyle : "", className)}
@@ -349,10 +393,11 @@ export function ChatManager({
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Primary Chat Feed */}
-        <div className={`flex flex-col flex-1 h-full min-w-0`}>
+        <div className={`flex flex-col flex-1 h-full min-w-0 relative`}>
           <div
-            className={cn("flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
+            className={cn("flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent dark:[&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
             style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
+            onScroll={handleScroll}
           >
             {messages.length === 0 && welcomeScreen && (
               <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
@@ -773,6 +818,28 @@ export function ChatManager({
             <div ref={messagesEndRef} />
           </div>
 
+          {userScrolledUp && (
+            <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10 pointer-events-none">
+              <Button
+                variant="secondary"
+                size="icon"
+                className="rounded-full shadow-md w-8 h-8 opacity-90 hover:opacity-100 pointer-events-auto bg-background border border-border text-foreground transition-opacity"
+                onClick={() => {
+                  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                  setUserScrolledUp(false);
+                }}
+                title="Scroll to bottom"
+              >
+                <span
+                  className={typeof scrollButtonStyles.iconStyles === 'string' ? scrollButtonStyles.iconStyles : ""}
+                  style={typeof scrollButtonStyles.iconStyles === 'object' ? scrollButtonStyles.iconStyles : {}}
+                >
+                  {scrollButtonStyles.icon || <ArrowDown size={16} />}
+                </span>
+              </Button>
+            </div>
+          )}
+
           {promptChips?.promptChipList && promptChips.promptChipList.length > 0 && (promptChips.alwaysShow || messages.length === 0) && (
             <div
               className={cn("px-4 pb-2 pt-3 flex flex-wrap gap-2 shrink-0 border-t border-inherit", typeof chatManagerComponentStyles?.promptChipStyles?.promptChipContainerStyle === 'string' ? chatManagerComponentStyles.promptChipStyles.promptChipContainerStyle : "")}
@@ -818,7 +885,7 @@ export function ChatManager({
                   }
                 }}
                 placeholder={labels.placeholder || "Type a message..."}
-                className={cn("flex-1 bg-foreground/5 border-transparent shadow-sm focus-visible:bg-transparent", typeof inputSectionStyle.inputStyle === 'string' ? inputSectionStyle.inputStyle : "")}
+                className={cn("flex-1 bg-foreground/5 border-transparent shadow-sm focus-visible:bg-transparent [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent dark:[&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600", typeof inputSectionStyle.inputStyle === 'string' ? inputSectionStyle.inputStyle : "")}
                 style={typeof inputSectionStyle.inputStyle === 'object' ? inputSectionStyle.inputStyle : undefined}
                 suppressHydrationWarning={true}
                 maxLength={maxInputCharacter}

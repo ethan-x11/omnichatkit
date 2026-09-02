@@ -225,10 +225,14 @@ export interface ChatManagerComponentStyles {
   inputSectionStyle?: InputStyles;
   headerStyle?: HeaderStyles;
   promptChipStyles?: PromptChipStyles;
+  scrollButtonStyles?: {
+    icon?: ReactNode;
+    iconStyles?: React.CSSProperties | string;
+  };
   backgroundStyle?: React.CSSProperties | string;
 }
 
-export type ChatManagerBaseProps = {
+export type ChatManagerBaseProps = { 
   theme?: ChatTheme;
   className?: string;
   style?: React.CSSProperties;

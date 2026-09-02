@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { SheetClose } from './ui/sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { Skeleton } from './ui/skeleton';
 
 type StyleValue = React.CSSProperties | string | undefined;
 
@@ -101,7 +102,10 @@ export function SessionManager({
   const isSheetCollapsible = collapsible === true || collapsible === 'sheet';
   const isInlineCollapsible = collapsible === 'inline';
 
+  const [isHydrated, setIsHydrated] = useState(false);
+
   React.useEffect(() => {
+    setIsHydrated(true);
     const intervalId = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
     return () => window.clearInterval(intervalId);
   }, []);
@@ -260,6 +264,35 @@ export function SessionManager({
     );
   }
 
+  if (!isHydrated) {
+    if (isSheetCollapsible) return null;
+    if (isInlineCollapsible && isInlineCollapsed) {
+      const borderClass = position === 'right' ? 'border-l' : 
+                          position === 'top' ? 'border-b' :
+                          position === 'bottom' ? 'border-t' : 'border-r';
+      return (
+        <div className={cn(`flex flex-col h-full bg-background items-center py-4 ${borderClass}`, className)} style={{ width: '60px', minWidth: '60px', ...style }}>
+          <Skeleton className="h-8 w-8 rounded-md" />
+        </div>
+      );
+    }
+    return (
+      <div className={cn("flex flex-col h-full bg-background border-r border-border", className)} style={style}>
+        <div className="p-4 border-b flex flex-row items-center justify-between">
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <div className="p-4 border-b">
+          <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+        <div className="flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 space-y-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent dark:[&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600">
+          <Skeleton className="h-16 w-full rounded-xl" />
+          <Skeleton className="h-16 w-full rounded-xl" />
+          <Skeleton className="h-16 w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
   const innerContent = (
     <div className={cn("flex flex-col h-full bg-background", className)} style={style}>
       <SheetHeader className="p-4 border-b flex flex-row items-center justify-between">
@@ -319,7 +352,7 @@ export function SessionManager({
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto [scrollbar-gutter:stable] p-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent dark:[&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600">
         <div className="px-2 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           {recentLabel}
         </div>

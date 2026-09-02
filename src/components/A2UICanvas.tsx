@@ -7,6 +7,7 @@ import { catalog as preBuiltCustomCatalog } from './a2ui';
 import { surfaceBus, type A2UIOp } from './a2ui/surface-bus';
 import { A2UICanvasProps } from '../types';
 import { useAIChatStore } from '../store/useAIChatStore';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Types for the in-memory surface state
@@ -368,7 +369,10 @@ export function A2UICanvas({ emptyState, className, style }: A2UICanvasProps = {
 
   return (
     <div
-      className={`a2ui-canvas w-full rounded-md border bg-card text-card-foreground shadow-sm overflow-auto ${className || ''}`}
+      className={cn(
+        "a2ui-canvas w-full h-full rounded-md border bg-background text-foreground shadow-sm overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent dark:[&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600",
+        className
+      )}
       style={style}
       data-layout={layout ?? 'inline'}
       data-surface-id={surface.surfaceId}
