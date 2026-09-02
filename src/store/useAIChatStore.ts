@@ -178,6 +178,7 @@ interface AIChatState {
   includeBasicCatalog: boolean;
   a2uiToolName: string;
   a2uiVersion: 'V0.8' | 'V0.9' | 'V0.9.1' | 'V1.0';
+  apiMode: 'classic' | 'ag-ui';
   setCatalog: (catalog: A2UICatalog) => void;
   setTheme: (theme: ChatTheme) => void;
   setSessionStorageMode: (mode: StorageMode) => void;
@@ -185,6 +186,7 @@ interface AIChatState {
   setIncludeBasicCatalog: (include: boolean) => void;
   setA2uiToolName: (name: string) => void;
   setA2uiVersion: (version: 'V0.8' | 'V0.9' | 'V0.9.1' | 'V1.0') => void;
+  setApiMode: (mode: 'classic' | 'ag-ui') => void;
   
   pendingHITLAction: any | null;
   setPendingHITLAction: (action: any | null) => void;
@@ -217,6 +219,7 @@ export const useAIChatStore = create<AIChatState>()(
       includeBasicCatalog: false,
       a2uiToolName: 'renderComponent',
       a2uiVersion: 'V0.9', // Default version
+      apiMode: 'classic',
       setCatalog: (catalog) => set({ catalog }),
       setTheme: (theme) => set({ theme }),
       setSessionStorageMode: (mode) => set(mode === 'disabled'
@@ -227,6 +230,7 @@ export const useAIChatStore = create<AIChatState>()(
       setIncludeBasicCatalog: (include) => set({ includeBasicCatalog: include }),
       setA2uiToolName: (name) => set({ a2uiToolName: name }),
       setA2uiVersion: (version) => set({ a2uiVersion: version }),
+      setApiMode: (mode) => set({ apiMode: mode }),
       
       pendingHITLAction: null,
       setPendingHITLAction: (action) => set({ pendingHITLAction: action }),

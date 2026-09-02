@@ -21,15 +21,17 @@ export function OmniChat({
   const setIncludeBasicCatalog = useAIChatStore((state) => state.setIncludeBasicCatalog);
   const setA2uiToolName = useAIChatStore((state) => state.setA2uiToolName);
   const setA2uiVersion = useAIChatStore((state) => state.setA2uiVersion);
+  const setApiMode = useAIChatStore((state) => state.setApiMode);
 
   useEffect(() => {
+    setApiMode(api_mode);
     if (useA2UI && a2uiProps) {
       if (a2uiProps.catalog) setCatalog(a2uiProps.catalog);
       if (a2uiProps.includeBasicCatalog !== undefined) setIncludeBasicCatalog(a2uiProps.includeBasicCatalog);
       if (a2uiProps.a2uiToolName) setA2uiToolName(a2uiProps.a2uiToolName);
       if (a2uiProps.a2uiVersion) setA2uiVersion(a2uiProps.a2uiVersion);
     }
-  }, [useA2UI, a2uiProps, setCatalog, setIncludeBasicCatalog, setA2uiToolName, setA2uiVersion]);
+  }, [api_mode, useA2UI, a2uiProps, setApiMode, setCatalog, setIncludeBasicCatalog, setA2uiToolName, setA2uiVersion]);
   
   // Map OmniChat prop 'a2uiRenderingOption' to ChatManager 'layout'
   const chatLayout: A2UILayout = (useA2UI && a2uiProps?.a2uiRenderingOption === 'detached') ? 'split' : 'inline';
