@@ -316,12 +316,12 @@ import { User, Bot } from 'lucide-react';
       // Advanced message layout & styling
       // Note: OmniChatKit automatically applies a sharp "notch" (corner radius) 
       // to the bottom-right or bottom-left depending on the alignment!
-      userMessageStyle: {
+      userMessageStyles: {
         alignment: "right", // Align left, right, or center
         bubbleStyle: "bg-blue-600 text-white shadow-md rounded-2xl px-4 py-3",
         containerStyle: "mt-2"
       },
-      assistantMessageStyle: {
+      assistantMessageStyles: {
         alignment: "left", // Defaults to left, but can be overridden to center or right
         bubbleStyle: "bg-slate-800 text-slate-200 shadow-sm rounded-2xl px-4 py-3"
       },
