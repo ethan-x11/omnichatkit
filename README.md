@@ -65,7 +65,7 @@ export default function ChatPage() {
       <A2UICanvas emptyState={<div className="p-4 text-center">Waiting for UI...</div>} />
       
       {/* ChatManager handles the message feed and input */}
-      <ChatManager collapsible={true} position="right" />
+      <ChatManager display="embedded" displayOptions={{ collapsible: true }} position="right" />
     </OmniChat>
   );
 }
@@ -87,7 +87,7 @@ export default function ChatPage() {
         
         <div className="flex flex-1 flex-col relative">
           {/* ChatManager handles the message feed and input */}
-          <ChatManager collapsible={true} position="right" />
+          <ChatManager display="embedded" displayOptions={{ collapsible: true }} position="right" />
         </div>
       </div>
     </AGUIChatProvider>
@@ -247,7 +247,10 @@ const chatApiSchema = useAIChatStore((s) => s.chatApiSchema);
 The `ChatManager` component comes with extensive styling and layout capabilities.
 
 #### Layout Props
-- **`collapsible`** (`boolean`): Renders the component as a floating drawer (`<Sheet>`) with a dynamic toggle button.
+- **`display`** (`"floating" | "embedded"`): Controls the layout mode of the chat manager. 
+- **`displayOptions`** (`object`): Configuration for the selected display mode.
+  - `collapsible` (`boolean`): When display is "embedded", renders the component as a floating drawer (`<Sheet>`) with a dynamic toggle button.
+  - `isResizable` (`boolean`): When display is "embedded", allows the chat drawer to be resized by the user.
 - **`position`** (`"left" | "right" | "top" | "bottom"`): Controls where the drawer docks and automatically aligns the close button correctly.
 - **`welcomeScreen`** (`boolean | ReactNode`): Set to `true` (default) to show the default welcome screen, or pass a custom React element.
 - **`maxInputCharacter`** (`number`): Optional limit for the maximum number of characters allowed in the chat input box.

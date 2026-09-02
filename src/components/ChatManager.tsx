@@ -82,8 +82,7 @@ export function ChatManager({
   chatManagerComponentStyles = {},
   position = 'right',
   display,
-  collapsible = false,
-  isResizable = false,
+  displayOptions,
   collapseToggleButtonPosition = 'bottom-right',
   toggleButtonProps,
   defaultOpen = false,
@@ -98,6 +97,8 @@ export function ChatManager({
   maxInputCharacter,
   streaming
 }: ChatManagerProps) {
+  const collapsible = displayOptions?.collapsible ?? false;
+  const isResizable = displayOptions?.isResizable ?? false;
   const {
     messageStyle = {},
     inputSectionStyle = {},

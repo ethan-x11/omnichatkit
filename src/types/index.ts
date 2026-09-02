@@ -261,8 +261,8 @@ export type ChatManagerBaseProps = {
 };
 
 export type ChatManagerProps = ChatManagerBaseProps & (
-  | { display: 'floating'; collapsible?: never; isResizable?: never }
-  | { display?: 'embedded'; collapsible?: boolean; isResizable?: boolean }
+  | { display: 'floating'; displayOptions?: never }
+  | { display?: 'embedded'; displayOptions?: { collapsible?: boolean; isResizable?: boolean } }
 );
 
 export interface SessionListStyles {
@@ -330,8 +330,8 @@ type OmniChatBaseProps = {
   sessionRoute?: string;
   children?: ReactNode;
 } & (
-  | { useA2UI?: true; a2uiRenderingOption: 'chat' | 'detached'; a2uiProps: A2UIProps }
-  | { useA2UI: false; a2uiRenderingOption?: never; a2uiProps?: never }
+  | { useA2UI?: true; a2uiProps: A2UIProps }
+  | { useA2UI: false; a2uiProps?: never }
 );
 
 /**
@@ -360,6 +360,7 @@ export interface A2UIProps {
   includePreBuiltCustomComponents?: boolean;
   layout?: A2UILayout;
   catalog?: A2UICatalog;
+  a2uiRenderingOption?: 'chat' | 'detached';
 }
 
 export interface A2UICanvasProps {

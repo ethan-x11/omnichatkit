@@ -9,7 +9,6 @@ export function OmniChat({
   api_mode,
   theme,
   useA2UI = true,
-  a2uiRenderingOption,
   a2uiProps,
   apiEndpoint,
   chatApiSchema,
@@ -32,6 +31,7 @@ export function OmniChat({
   }, [api_mode, chatApiSchema, setApiMode, setChatApiSchema, useA2UI, a2uiProps, setA2UIProps]);
   
   // Map OmniChat prop 'a2uiRenderingOption' to ChatManager 'layout'
+  const a2uiRenderingOption = a2uiProps?.a2uiRenderingOption;
   const chatLayout: A2UILayout = (useA2UI && a2uiRenderingOption === 'detached') ? 'split' : 'inline';
 
   // Select the appropriate provider based on api_mode
