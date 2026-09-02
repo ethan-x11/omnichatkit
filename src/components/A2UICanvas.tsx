@@ -5,7 +5,8 @@ import { AIChatContext } from './AIChatProvider';
 import { AGUIChatContext } from './AGUIChatProvider';
 import { catalog as preBuiltCustomCatalog } from './a2ui';
 import { surfaceBus, type A2UIOp } from './a2ui/surface-bus';
-import { A2UICanvasProps } from '../types';
+import { A2UIProps } from '../types';
+import { useAIChatStore } from '../store/useAIChatStore';
 
 // ---------------------------------------------------------------------------
 // Types for the in-memory surface state
@@ -186,15 +187,21 @@ function RenderNode({
 // Main component
 // ---------------------------------------------------------------------------
 
-export function A2UICanvas({
-  agentId,
-  a2uiToolName,
-  a2uiVersion,
-  catalog: userCatalog,
-  includeBasicCatalog = false,
-  includePreBuiltCustomComponents = true,
-  layout,
-}: A2UICanvasProps) {
+export interface A2UICanvasProps {
+  emptyState?: React.ReactNode;
+}
+
+export function A2UICanvas({ emptyState }: A2UICanvasProps = {}) {
+  const a2uiProps = useAIChatStore((state) => state.a2uiProps);
+  const {
+    agentId,
+    a2uiToolName = 'renderComponent',
+    a2uiVersion = 'V0.9',
+    includeBasicCatalog = true,
+    includePreBuiltCustomComponents = true,
+    layout = 'inline',
+    catalog: providedCatalog,
+  } = a2uiProps || {};
   // ── Catalog composition ─────────────────────────────────────────────────
   const catalog = useMemo<Record<string, React.FC<any>>>(() => ({
     // pre-built custom catalog (our renderers.tsx)
@@ -202,8 +209,8 @@ export function A2UICanvas({
     // basic catalog (same renderers, flagged by includeBasicCatalog — no external dep needed)
     ...(includeBasicCatalog ? preBuiltCustomCatalog : {}),
     // user-supplied overrides / additions
-    ...userCatalog,
-  }), [includePreBuiltCustomComponents, includeBasicCatalog, userCatalog]);
+    ...providedCatalog,
+  }), [includePreBuiltCustomComponents, includeBasicCatalog, providedCatalog]);
 
   // ── Message context ──────────────────────────────────────────────────────
   const aiContext = React.useContext(AIChatContext);
@@ -211,7 +218,7 @@ export function A2UICanvas({
   const context = aiContext || aguiContext;
 
   if (!context) {
-    throw new Error('A2UICanvas must be used within either an AIChatProvider or an AGUIChatProvider');
+    throw new Error('A2UICanvas must be used within OmniChat, AIChatProvider, or AGUIChatProvider');
   }
 
   const { messages } = context;
@@ -328,6 +335,13 @@ export function A2UICanvas({
 
   // ── Render ────────────────────────────────────────────────────────────────
   if (!surface || !surface.rootId) {
+    if (emptyState) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center p-8">
+          {emptyState}
+        </div>
+      );
+    }
     return null;
   }
 

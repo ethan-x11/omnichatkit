@@ -77,7 +77,6 @@ function A2UIToolPill({
 
 export function ChatManager({
   theme,
-  layout = 'split',
   className,
   style,
   chatManagerComponentStyles = {},
@@ -94,7 +93,6 @@ export function ChatManager({
   labels = {},
   promptChips,
   agentId,
-  a2uiToolName,
   a2uiPosition = 'left',
   collapsibleA2UI = false,
   maxInputCharacter,
@@ -141,9 +139,10 @@ export function ChatManager({
     }
   }, [activeSessionId, context?.messages, sessionsEnabled, updateSessionMessages]);
   const isLoading = status === 'submitted' || status === 'streaming';
+  const globalTheme = useAIChatStore((state) => state.theme);
+  const a2uiToolName = useAIChatStore((state) => state.a2uiProps?.a2uiToolName);
   // Whether A2UI canvas is active for this manager instance
   const hasA2UI = !!a2uiToolName;
-  const globalTheme = useAIChatStore((state) => state.theme);
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [isA2UIOpen, setIsA2UIOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -349,7 +348,7 @@ export function ChatManager({
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Primary Chat Feed */}
-        <div className={`flex flex-col flex-1 h-full min-w-0 ${layout === 'split' && hasA2UI ? 'border-r border-inherit' : ''}`}>
+        <div className={`flex flex-col flex-1 h-full min-w-0`}>
           <div
             className={cn("flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
             style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
@@ -582,10 +581,9 @@ export function ChatManager({
                   {hasTool && (
                     <div className="mt-3 flex flex-col gap-2 w-full min-w-0 max-w-full">
                       {toolInvocations.map((tool: any) => {
-                        // When layout is 'inline' and this is an A2UI tool call,
-                        // push the ops to the surface bus and show a status pill.
-                        // The actual canvas is rendered once below the message feed.
-                        if (layout === 'inline' && hasA2UI && tool.toolName === a2uiToolName) {
+                        // When this is an A2UI tool call, show a status pill.
+                        // The actual canvas is rendered externally.
+                        if (hasA2UI && tool.toolName === a2uiToolName) {
                           return (
                             <A2UIToolPill
                               key={tool.toolCallId}
@@ -767,30 +765,12 @@ export function ChatManager({
           </form>
         </div>
 
-        {/* Inline A2UI Canvas Pane — pinned below the message feed when layout='inline' */}
-        {layout === 'inline' && hasA2UI && a2uiToolName && (
-          <div className="border-t border-inherit shrink-0 max-h-[40%] overflow-y-auto p-4">
-            <A2UICanvas
-              agentId={agentId ?? 'default'}
-              a2uiToolName={a2uiToolName}
-            />
-          </div>
-        )}
 
-        {/* Split A2UI Canvas Pane */}
-        {layout === 'split' && hasA2UI && a2uiToolName && !collapsibleA2UI && (
-          <div className="w-1/2 h-full bg-inherit overflow-y-auto p-4 relative shrink-0">
-            <A2UICanvas
-              agentId={agentId ?? 'default'}
-              a2uiToolName={a2uiToolName}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
 
-  const a2uiSheetContent = layout === 'split' && hasA2UI && a2uiToolName && collapsibleA2UI ? (
+  const a2uiSheetContent = hasA2UI && a2uiToolName && collapsibleA2UI ? (
     <Sheet open={isA2UIOpen} onOpenChange={setIsA2UIOpen}>
       <SheetTrigger
         render={
@@ -811,10 +791,7 @@ export function ChatManager({
             )}
           </SheetHeader>
           <div className="flex-1 overflow-y-auto p-4 relative">
-            <A2UICanvas
-              agentId={agentId ?? 'default'}
-              a2uiToolName={a2uiToolName}
-            />
+            <A2UICanvas />
           </div>
         </div>
       </SheetContent>

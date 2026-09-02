@@ -193,7 +193,6 @@ export interface ChatManagerComponentStyles {
 
 export type ChatManagerBaseProps = {
   theme?: ChatTheme;
-  layout?: A2UILayout;
   className?: string;
   style?: React.CSSProperties;
   chatManagerComponentStyles?: ChatManagerComponentStyles;
@@ -218,8 +217,6 @@ export type ChatManagerBaseProps = {
   promptChips?: PromptChips;
   agentId?: string;
   sessionId?: string;
-  /** Tool name the AI uses to emit A2UI surface ops. Required to enable A2UI rendering. */
-  a2uiToolName?: string;
   a2uiPosition?: ComponentPosition; // Used when layout is 'split'
   collapsibleA2UI?: boolean; // Used when layout is 'split'
   maxInputCharacter?: number;
@@ -296,8 +293,8 @@ type OmniChatBaseProps = {
   sessionRoute?: string;
   children?: ReactNode;
 } & (
-  | { useA2UI?: true; a2uiRenderingOption: 'chat' | 'detached' }
-  | { useA2UI: false; a2uiRenderingOption?: never }
+  | { useA2UI?: true; a2uiRenderingOption: 'chat' | 'detached'; a2uiProps: A2UIProps }
+  | { useA2UI: false; a2uiRenderingOption?: never; a2uiProps?: never }
 );
 
 /**
@@ -318,7 +315,7 @@ export type OmniChatProps = OmniChatBaseProps & (
   | { api_mode: 'ag-ui'; chatApiSchema?: never }
 );
 
-export interface A2UICanvasProps {
+export interface A2UIProps {
   agentId: string;
   a2uiToolName: string;
   a2uiVersion?: 'V0.8' | 'V0.9' | 'V0.9.1' | 'V1.0';

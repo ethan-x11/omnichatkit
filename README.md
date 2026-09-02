@@ -49,17 +49,20 @@ export default function ChatPage() {
   return (
     <OmniChat 
       api_mode="ag-ui" // "ag-ui" or "classic"
-      apiRoute="/api/agent"
+      apiEndpoint="/api/agent"
       a2uiRenderingOption="detached" // "detached" (split pane) or "chat" (inline)
       useA2UI={true}
-      a2uiToolName="render-dynamic-ui"
+      a2uiProps={{
+        a2uiToolName: "render-dynamic-ui",
+        agentId: "orchestratr_agent"
+      }}
       theme="dark"
     >
       {/* SessionManager slides out from the left by default */}
       <SessionManager storageMode="api" collapsible={false} className="w-80 shrink-0" />
       
-      {/* A2UICanvas renders Generative UI tools */}
-      <A2UICanvas />
+      {/* A2UICanvas renders Generative UI tools. It automatically inherits config from OmniChat! */}
+      <A2UICanvas emptyState={<div className="p-4 text-center">Waiting for UI...</div>} />
       
       {/* ChatManager handles the message feed and input */}
       <ChatManager collapsible={true} position="right" />
@@ -139,7 +142,7 @@ When `api_mode="classic"`, OmniChatKit uses the Vercel AI SDK's `useChat` hook u
     apiResponseSchema: { /* how to deserialize the inbound response */ },
   }}
 >
-  <ChatManager useA2UI={false} a2uiToolName="" />
+  <ChatManager />
 </OmniChat>
 ```
 
@@ -260,14 +263,14 @@ The `ChatManager` component comes with extensive styling and layout capabilities
 Use the `streaming` prop to explicitly control whether responses are streamed:
 
 ```tsx
-{/* Disable streaming â€” receive the full response at once */}
-<ChatManager streaming={false} useA2UI={false} a2uiToolName="" />
+{/* Disable streaming — receive the full response at once */}
+<ChatManager streaming={false} />
 
 {/* Force streaming on (default behavior for most backends) */}
-<ChatManager streaming={true} useA2UI={false} a2uiToolName="" />
+<ChatManager streaming={true} />
 
 {/* Omit the prop entirely to let the backend decide */}
-<ChatManager useA2UI={false} a2uiToolName="" />
+<ChatManager />
 ```
 
 The `streaming` flag is forwarded in the request body (`{ streaming: true|false }`) on every message send, including prompt chip clicks. Your API route can read and act on this:
@@ -354,7 +357,7 @@ Enable sessions on `OmniChat` (or either chat provider) before rendering it. Ses
 ```tsx
 <OmniChat api_mode="ag-ui" sessionStorageMode="api">
   <SessionManager />
-  <ChatManager useA2UI={false} />
+  <ChatManager />
 </OmniChat>
 ```
 

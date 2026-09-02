@@ -10,6 +10,7 @@ export function OmniChat({
   theme,
   useA2UI = true,
   a2uiRenderingOption,
+  a2uiProps,
   apiEndpoint,
   chatApiSchema,
   chatManagerProps,
@@ -20,14 +21,18 @@ export function OmniChat({
   
   const setApiMode = useAIChatStore((state) => state.setApiMode);
   const setChatApiSchema = useAIChatStore((state) => state.setChatApiSchema);
+  const setA2UIProps = useAIChatStore((state) => state.setA2UIProps);
 
   useEffect(() => {
     setApiMode(api_mode);
     setChatApiSchema(api_mode === 'classic' ? chatApiSchema : undefined);
-  }, [api_mode, chatApiSchema, setApiMode, setChatApiSchema]);
+    if (useA2UI && a2uiProps) {
+      setA2UIProps(a2uiProps);
+    }
+  }, [api_mode, chatApiSchema, setApiMode, setChatApiSchema, useA2UI, a2uiProps, setA2UIProps]);
   
   // Map OmniChat prop 'a2uiRenderingOption' to ChatManager 'layout'
-  const chatLayout: A2UILayout = a2uiRenderingOption === 'detached' ? 'split' : 'inline';
+  const chatLayout: A2UILayout = (useA2UI && a2uiRenderingOption === 'detached') ? 'split' : 'inline';
 
   // Select the appropriate provider based on api_mode
   const Provider = api_mode === 'ag-ui' ? AGUIChatProvider : AIChatProvider;

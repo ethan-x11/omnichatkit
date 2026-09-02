@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { A2UICatalog, ApiSchema, ChatTheme, StorageMode } from '../types';
+import { A2UICatalog, ApiSchema, ChatTheme, StorageMode, A2UIProps } from '../types';
 
 export type Role = 'system' | 'user' | 'assistant' | 'tool';
 export type HITLStatus = 'none' | 'pending' | 'approved' | 'rejected';
@@ -171,23 +171,17 @@ const messagesAreEqual = (currentMessages: ChatMessage[] | undefined, nextMessag
 };
 
 interface AIChatState {
-  catalog: A2UICatalog;
   theme: ChatTheme;
   sessionStorageMode: StorageMode;
   sessionRoute: string;
-  includeBasicCatalog: boolean;
-  a2uiToolName: string;
-  a2uiVersion: 'V0.8' | 'V0.9' | 'V0.9.1' | 'V1.0';
   apiMode: 'classic' | 'ag-ui';
   /** Schema that maps OmniChatKit's internal message format to the backend API (classic mode only). */
   chatApiSchema: ApiSchema | undefined;
-  setCatalog: (catalog: A2UICatalog) => void;
   setTheme: (theme: ChatTheme) => void;
   setSessionStorageMode: (mode: StorageMode) => void;
   setSessionRoute: (endpoint: string) => void;
-  setIncludeBasicCatalog: (include: boolean) => void;
-  setA2uiToolName: (name: string) => void;
-  setA2uiVersion: (version: 'V0.8' | 'V0.9' | 'V0.9.1' | 'V1.0') => void;
+  a2uiProps: A2UIProps | undefined;
+  setA2UIProps: (props: A2UIProps) => void;
   setApiMode: (mode: 'classic' | 'ag-ui') => void;
   setChatApiSchema: (schema: ApiSchema | undefined) => void;
   
@@ -215,25 +209,19 @@ interface AIChatState {
 export const useAIChatStore = create<AIChatState>()(
   persist(
     (set, get) => ({
-      catalog: {},
       theme: 'standard',
       sessionStorageMode: 'disabled',
       sessionRoute: '/session',
-      includeBasicCatalog: false,
-      a2uiToolName: 'renderComponent',
-      a2uiVersion: 'V0.9', // Default version
       apiMode: 'classic',
       chatApiSchema: undefined,
-      setCatalog: (catalog) => set({ catalog }),
       setTheme: (theme) => set({ theme }),
       setSessionStorageMode: (mode) => set(mode === 'disabled'
         ? { sessionStorageMode: mode, sessions: [], activeSessionId: null }
         : { sessionStorageMode: mode }
       ),
       setSessionRoute: (endpoint) => set({ sessionRoute: endpoint }),
-      setIncludeBasicCatalog: (include) => set({ includeBasicCatalog: include }),
-      setA2uiToolName: (name) => set({ a2uiToolName: name }),
-      setA2uiVersion: (version) => set({ a2uiVersion: version }),
+      a2uiProps: undefined,
+      setA2UIProps: (props) => set({ a2uiProps: props }),
       setApiMode: (mode) => set({ apiMode: mode }),
       setChatApiSchema: (schema) => set({ chatApiSchema: schema }),
       
@@ -449,7 +437,7 @@ export const useAIChatStore = create<AIChatState>()(
         const currentSession = state.sessions.find((session) => session.id === id);
         if (!currentSession) return undefined;
 
-        const storedMessages = toStoredMessages(messages, id, state.a2uiToolName);
+        const storedMessages = toStoredMessages(messages, id, state.a2uiProps?.a2uiToolName || 'renderComponent');
         if (messagesAreEqual(currentSession.messages, storedMessages)) {
           return currentSession;
         }
