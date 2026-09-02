@@ -4,7 +4,7 @@ import React, { useEffect, useMemo } from 'react';
 import { AIChatContext } from './AIChatProvider';
 import { AGUIChatContext } from './AGUIChatProvider';
 import { useAIChatStore } from '../store/useAIChatStore';
-import { catalog as internalCatalog } from './a2ui';
+import { catalog as preBuiltCustomCatalog } from './a2ui';
 import { A2UICanvasProps } from '../types';
 
 export function A2UICanvas({
@@ -12,7 +12,8 @@ export function A2UICanvas({
   a2uiToolName,
   a2uiVersion,
   catalog: userCatalog,
-  includeBasicCatalog = true,
+  includeBasicCatalog = false,
+  includePreBuiltCustomComponents = true,
   layout,
 }: A2UICanvasProps) {
   const setCatalog = useAIChatStore((state) => state.setCatalog);
@@ -32,11 +33,12 @@ export function A2UICanvas({
   const storeIncludeBasicCatalog = useAIChatStore((state) => state.includeBasicCatalog);
   const storeA2uiToolName = useAIChatStore((state) => state.a2uiToolName);
 
-  // Merge internal catalog with user-provided catalog
+  // Merge catalogs: basic -> pre-built custom -> user-provided
   const catalog = useMemo(() => ({
-    ...(storeIncludeBasicCatalog ? internalCatalog : {}),
+    ...(storeIncludeBasicCatalog ? preBuiltCustomCatalog : {}),
+    ...(includePreBuiltCustomComponents ? preBuiltCustomCatalog : {}),
     ...globalCatalog,
-  }), [globalCatalog, storeIncludeBasicCatalog]);
+  }), [globalCatalog, storeIncludeBasicCatalog, includePreBuiltCustomComponents]);
 
   const aiContext = React.useContext(AIChatContext);
   const aguiContext = React.useContext(AGUIChatContext);

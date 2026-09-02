@@ -557,11 +557,6 @@ export function ChatManager({
                         if (useA2UI && layout === 'inline' && tool.toolName === a2uiToolName) {
                           return (
                             <A2UICanvas
-                              key={tool.toolCallId}
-                              componentPayload={{
-                                name: tool.args.componentName || tool.args.name || tool.toolName,
-                                props: tool.args.props || tool.args
-                              }}
                             />
                           );
                         }

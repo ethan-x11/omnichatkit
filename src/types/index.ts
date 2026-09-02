@@ -324,6 +324,7 @@ export interface A2UICanvasProps {
   a2uiToolName: string;
   a2uiVersion?: 'V0.8' | 'V0.9' | 'V0.9.1' | 'V1.0';
   includeBasicCatalog?: boolean;
+  includePreBuiltCustomComponents?: boolean;
   layout?: A2UILayout;
   catalog?: A2UICatalog;
 }
