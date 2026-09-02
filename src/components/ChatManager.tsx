@@ -98,7 +98,8 @@ export function ChatManager({
   maxInputCharacter,
   streaming,
   showToolCalls = true,
-  showReasoning = true
+  showReasoning = true,
+  sendHistory = true
 }: ChatManagerProps) {
   const collapsible = displayOptions?.collapsible ?? false;
   const isResizable = displayOptions?.isResizable ?? false;
@@ -242,7 +243,10 @@ export function ChatManager({
   }, [messages, autoScroll, userScrolledUp]);
 
   const handleFormSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
-    const options = streaming !== undefined ? { body: { streaming } } : undefined;
+    const body: Record<string, any> = {};
+    if (streaming !== undefined) body.streaming = streaming;
+    if (!sendHistory) body.sendHistory = false;
+    const options = Object.keys(body).length > 0 ? { body } : undefined;
     handleSubmit(e, options);
   };
 
@@ -250,7 +254,10 @@ export function ChatManager({
     if (!prompt.trim() || !context?.append) return;
 
     try {
-      const options = streaming !== undefined ? { body: { streaming } } : undefined;
+      const body: Record<string, any> = {};
+      if (streaming !== undefined) body.streaming = streaming;
+      if (!sendHistory) body.sendHistory = false;
+      const options = Object.keys(body).length > 0 ? { body } : undefined;
       await context.append({ role: 'user', content: prompt }, options);
     } catch (error) {
       console.error('Failed to send the prompt chip:', error);

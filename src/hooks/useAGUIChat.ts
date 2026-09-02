@@ -96,11 +96,15 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
     setEvents([]);
     
     try {
-      const aguiMessages = messagesRef.current.map(m => ({
+      let aguiMessages = messagesRef.current.map(m => ({
         role: m.role as any,
         content: m.content as string,
         id: m.id
       })) as AGUIMessage[];
+
+      if (chatRequestOptions?.body?.sendHistory === false) {
+        aguiMessages = aguiMessages.length > 0 ? [aguiMessages[aguiMessages.length - 1]] : [];
+      }
 
       setStatus('streaming');
       agentRef.current.setMessages(aguiMessages);

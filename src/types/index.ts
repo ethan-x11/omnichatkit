@@ -264,6 +264,7 @@ export type ChatManagerBaseProps = {
   streaming?: boolean;
   showToolCalls?: boolean;
   showReasoning?: boolean;
+  sendHistory?: boolean;
 };
 
 export type ChatManagerProps = ChatManagerBaseProps & (

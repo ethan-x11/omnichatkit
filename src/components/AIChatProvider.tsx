@@ -45,16 +45,28 @@ export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/a
 
   // Build a stable prepareRequestBody function when chatApiSchema.apiRequestSchema is provided
   const prepareRequestBody = React.useMemo(() => {
-    const reqSchema = chatApiSchema?.apiRequestSchema;
-    if (!reqSchema) return undefined;
-
     return (params: { messages: any[]; requestBody?: Record<string, unknown> }) => {
+      let finalMessages = params.messages;
+      
+      // Intercept sendHistory flag from request body
+      if (params.requestBody && params.requestBody.sendHistory === false) {
+        finalMessages = finalMessages.length > 0 ? [finalMessages[finalMessages.length - 1]] : [];
+      }
+
+      const reqSchema = chatApiSchema?.apiRequestSchema;
+      if (!reqSchema) {
+        return {
+          messages: finalMessages,
+          ...(params.requestBody ?? {}),
+        };
+      }
+
       const { messagesKey = 'messages', userMessageKey, extraBody, transform } = reqSchema;
       const base: Record<string, unknown> = {
         ...extraBody,
-        [messagesKey]: params.messages,
+        [messagesKey]: finalMessages,
         ...(userMessageKey
-          ? { [userMessageKey]: params.messages.at(-1)?.content ?? '' }
+          ? { [userMessageKey]: finalMessages.at(-1)?.content ?? '' }
           : {}),
         ...(params.requestBody ?? {}),
       };
@@ -66,7 +78,7 @@ export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/a
   const chatHelpers = useChat({
     api: finalApiRoute,
     body: effectiveSessionId ? { sessionId: effectiveSessionId } : undefined,
-    ...(prepareRequestBody ? { prepareRequestBody } : {}),
+    ...({ prepareRequestBody } as any),
     // Add additional AI SDK configurations here
   });
   const titleResponseRef = React.useRef('');
