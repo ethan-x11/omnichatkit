@@ -145,10 +145,47 @@ export interface AssistantMessageContentStyles extends MessageContentStyles {
   subAgentBadgeStyle?: BadgeStyles | string;
 }
 
+export interface ThinkingStepStyles {
+  containerStyle?: React.CSSProperties | string;
+  iconStyles?: {
+    icon?: ReactNode;
+    iconStyle?: React.CSSProperties | string;
+  };
+  titleStyle?: React.CSSProperties | string;
+  dataStyle?: React.CSSProperties | string;
+}
+
+export interface ToolCallStepStyles {
+  containerStyle?: React.CSSProperties | string;
+  headerStyles?: {
+    iconStyles?: {
+      icon?: ReactNode;
+      iconStyle?: React.CSSProperties | string;
+    };
+    titleStyles?: {
+      titleStyle?: React.CSSProperties | string;
+      toolNameStyle?: React.CSSProperties | string;
+    };
+  };
+  requestDataStyles?: {
+    icon?: ReactNode;
+    iconStyle?: React.CSSProperties | string;
+    titleStyle?: React.CSSProperties | string;
+    dataStyle?: React.CSSProperties | string;
+  };
+  responseDataStyles?: {
+    icon?: ReactNode;
+    iconStyle?: React.CSSProperties | string;
+    titleStyle?: React.CSSProperties | string;
+    dataStyle?: React.CSSProperties | string;
+  };
+}
+
 export interface MessageStyles {
-  assistantMessageStyle?: React.CSSProperties | string | AssistantMessageContentStyles;
-  userMessageStyle?: React.CSSProperties | string | MessageContentStyles;
-  thinkingStepStyle?: React.CSSProperties | string;
+  assistantMessageStyles?: React.CSSProperties | string | AssistantMessageContentStyles;
+  userMessageStyles?: React.CSSProperties | string | MessageContentStyles;
+  thinkingStepStyles?: ThinkingStepStyles;
+  toolCallStepStyles?: ToolCallStepStyles;
   stopResponseStyle?: React.CSSProperties | string;
   backgroundStyle?: React.CSSProperties | string;
 }

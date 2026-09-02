@@ -448,7 +448,7 @@ export function ChatManager({
               }
 
               const isUser = msg.role === 'user';
-              const customStyleRaw = isUser ? messageStyle.userMessageStyle : messageStyle.assistantMessageStyle;
+              const customStyleRaw = isUser ? messageStyle.userMessageStyles : messageStyle.assistantMessageStyles;
 
               let containerStyleClass = '';
               let containerStyleObj: React.CSSProperties | undefined = undefined;
@@ -533,18 +533,42 @@ export function ChatManager({
                     </div>
                   )}
 
-                  {thinkingContent && (
-                    <details className="mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group/think">
-                      <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
-                        <Brain size={14} className="animate-pulse" />
-                        <span>Reasoning</span>
-                        <ChevronDown size={14} className="ml-auto transition-transform group-open/think:rotate-180" />
-                      </summary>
-                      <div className="mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-4">
-                        <MarkdownRenderer text={thinkingContent} className="text-zinc-600 dark:text-zinc-400" />
-                      </div>
-                    </details>
-                  )}
+                  {thinkingContent && (() => {
+                    const tStyles = messageStyle.thinkingStepStyles || {};
+                    const thContainerStyle = tStyles.containerStyle;
+                    const thIconStyles = tStyles.iconStyles || {};
+                    const thTitleStyle = tStyles.titleStyle;
+                    const thDataStyle = tStyles.dataStyle;
+
+                    return (
+                      <details 
+                        className={cn("mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group/think", typeof thContainerStyle === 'string' ? thContainerStyle : "")}
+                        style={typeof thContainerStyle === 'object' ? thContainerStyle : {}}
+                      >
+                        <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
+                          <span 
+                            className={cn(typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : "")}
+                            style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
+                          >
+                            {thIconStyles.icon || <Brain size={14} className="animate-pulse" />}
+                          </span>
+                          <span
+                            className={typeof thTitleStyle === 'string' ? thTitleStyle : ""}
+                            style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}
+                          >
+                            Reasoning
+                          </span>
+                          <ChevronDown size={14} className="ml-auto transition-transform group-open/think:rotate-180" />
+                        </summary>
+                        <div 
+                          className={cn("mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-4", typeof thDataStyle === 'string' ? thDataStyle : "")}
+                          style={typeof thDataStyle === 'object' ? thDataStyle : {}}
+                        >
+                          <MarkdownRenderer text={thinkingContent} className="text-zinc-600 dark:text-zinc-400" />
+                        </div>
+                      </details>
+                    );
+                  })()}
 
 
                   {(mainContent || (!thinkingContent && !hasTool)) ? (
@@ -593,13 +617,38 @@ export function ChatManager({
                           );
                         }
 
+                        const tcStyles = messageStyle.toolCallStepStyles || {};
+                        const headerStyles = tcStyles.headerStyles || {};
+                        const reqStyles = tcStyles.requestDataStyles || {};
+                        const resStyles = tcStyles.responseDataStyles || {};
+
                         return (
-                          <details key={tool.toolCallId} className="group [&_summary::-webkit-details-marker]:hidden mb-2">
+                          <details 
+                            key={tool.toolCallId} 
+                            className={cn("group [&_summary::-webkit-details-marker]:hidden mb-2", typeof tcStyles.containerStyle === 'string' ? tcStyles.containerStyle : "")}
+                            style={typeof tcStyles.containerStyle === 'object' ? tcStyles.containerStyle : {}}
+                          >
                             <summary className="flex items-center justify-between cursor-pointer list-none p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/50">
                               <div className="flex items-center gap-2">
-                                <Wrench size={14} />
+                                <span 
+                                  className={typeof headerStyles.iconStyles?.iconStyle === 'string' ? headerStyles.iconStyles.iconStyle : ""}
+                                  style={typeof headerStyles.iconStyles?.iconStyle === 'object' ? headerStyles.iconStyles.iconStyle : {}}
+                                >
+                                  {headerStyles.iconStyles?.icon || <Wrench size={14} />}
+                                </span>
                                 <span className="flex items-center">
-                                  Tool Call: {tool.toolName}
+                                  <span
+                                    className={typeof headerStyles.titleStyles?.titleStyle === 'string' ? headerStyles.titleStyles.titleStyle : ""}
+                                    style={typeof headerStyles.titleStyles?.titleStyle === 'object' ? headerStyles.titleStyles.titleStyle : {}}
+                                  >
+                                    Tool Call:
+                                  </span>
+                                  <span
+                                    className={cn("ml-1", typeof headerStyles.titleStyles?.toolNameStyle === 'string' ? headerStyles.titleStyles.toolNameStyle : "")}
+                                    style={typeof headerStyles.titleStyles?.toolNameStyle === 'object' ? headerStyles.titleStyles.toolNameStyle : {}}
+                                  >
+                                    {tool.toolName}
+                                  </span>
                                   {messageToAgentMap.get(tool.toolCallId) && renderBadge(
                                     messageToAgentMap.get(tool.toolCallId) as string,
                                     subAgentBadgeStyleRaw,
@@ -612,15 +661,48 @@ export function ChatManager({
                               <ChevronDown size={14} className="transition-transform duration-200 group-open:rotate-180 opacity-50" />
                             </summary>
                             <div className="p-3 border border-t-0 border-zinc-200 dark:border-zinc-800 rounded-b-md bg-zinc-50/50 dark:bg-zinc-900/25 -mt-2 pt-4">
-                              <div className="overflow-x-auto rounded-md text-xs">
+                              {reqStyles.titleStyle || reqStyles.icon ? (
+                                <div className="font-medium mb-1 flex items-center gap-1">
+                                  <span
+                                    className={typeof reqStyles.iconStyle === 'string' ? reqStyles.iconStyle : ""}
+                                    style={typeof reqStyles.iconStyle === 'object' ? reqStyles.iconStyle : {}}
+                                  >
+                                    {reqStyles.icon}
+                                  </span>
+                                  <span
+                                    className={typeof reqStyles.titleStyle === 'string' ? reqStyles.titleStyle : ""}
+                                    style={typeof reqStyles.titleStyle === 'object' ? reqStyles.titleStyle : {}}
+                                  >
+                                    Request
+                                  </span>
+                                </div>
+                              ) : null}
+                              <div 
+                                className={cn("overflow-x-auto rounded-md text-xs", typeof reqStyles.dataStyle === 'string' ? reqStyles.dataStyle : "")}
+                                style={typeof reqStyles.dataStyle === 'object' ? reqStyles.dataStyle : {}}
+                              >
                                 <MarkdownRenderer text={`\`\`\`json\n${typeof tool.args === 'string' ? tool.args : JSON.stringify(tool.args, null, 2)}\n\`\`\``} />
                               </div>
                               {tool.result && (
                                 <div className="mt-2 bg-green-50 dark:bg-green-950/30 rounded p-2 text-xs border border-green-100 dark:border-green-900">
                                   <div className="text-green-600 dark:text-green-400 font-medium mb-1 flex items-center gap-1">
-                                    <CheckCircle2 size={12} /> Result
+                                    <span
+                                      className={typeof resStyles.iconStyle === 'string' ? resStyles.iconStyle : ""}
+                                      style={typeof resStyles.iconStyle === 'object' ? resStyles.iconStyle : {}}
+                                    >
+                                      {resStyles.icon || <CheckCircle2 size={12} />}
+                                    </span>
+                                    <span
+                                      className={typeof resStyles.titleStyle === 'string' ? resStyles.titleStyle : ""}
+                                      style={typeof resStyles.titleStyle === 'object' ? resStyles.titleStyle : {}}
+                                    >
+                                      Result
+                                    </span>
                                   </div>
-                                  <div className="overflow-x-auto rounded-md text-xs [&_.prose]:text-zinc-700 dark:[&_.prose]:text-zinc-300">
+                                  <div 
+                                    className={cn("overflow-x-auto rounded-md text-xs [&_.prose]:text-zinc-700 dark:[&_.prose]:text-zinc-300", typeof resStyles.dataStyle === 'string' ? resStyles.dataStyle : "")}
+                                    style={typeof resStyles.dataStyle === 'object' ? resStyles.dataStyle : {}}
+                                  >
                                     <MarkdownRenderer text={`\`\`\`json\n${typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)}\n\`\`\``} />
                                   </div>
                                 </div>
@@ -660,13 +742,28 @@ export function ChatManager({
                 const lastStep = stepEvents[stepEvents.length - 1];
                 const activeStepName = (lastStep && (lastStep.type === 'STEP_STARTED' || lastStep.type === 'StepStarted')) ? lastStep.stepName : null;
 
+                const tStyles = messageStyle.thinkingStepStyles || {};
+                const thContainerStyle = tStyles.containerStyle;
+                const thIconStyles = tStyles.iconStyles || {};
+                const thTitleStyle = tStyles.titleStyle;
+
                 return (
                   <div
-                    className={cn("text-sm text-zinc-500 animate-pulse flex items-center gap-2", typeof messageStyle.thinkingStepStyle === 'string' ? messageStyle.thinkingStepStyle : "")}
-                    style={typeof messageStyle.thinkingStepStyle === 'object' ? messageStyle.thinkingStepStyle : undefined}
+                    className={cn("text-sm text-zinc-500 animate-pulse flex items-center gap-2", typeof thContainerStyle === 'string' ? thContainerStyle : "")}
+                    style={typeof thContainerStyle === 'object' ? thContainerStyle : undefined}
                   >
-                    <PlayCircle size={14} className="animate-spin" />
-                    <span>{activeStepName ? `Executing step: ${activeStepName}...` : 'AI is thinking...'}</span>
+                    <span 
+                      className={typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : ""}
+                      style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
+                    >
+                      {thIconStyles.icon || <PlayCircle size={14} className="animate-spin" />}
+                    </span>
+                    <span
+                      className={typeof thTitleStyle === 'string' ? thTitleStyle : ""}
+                      style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}
+                    >
+                      {activeStepName ? `Executing step: ${activeStepName}...` : 'AI is thinking...'}
+                    </span>
                   </div>
                 );
               }
