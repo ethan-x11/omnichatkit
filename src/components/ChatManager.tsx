@@ -96,7 +96,9 @@ export function ChatManager({
   a2uiPosition = 'left',
   collapsibleA2UI = false,
   maxInputCharacter,
-  streaming
+  streaming,
+  showToolCalls = true,
+  showReasoning = true
 }: ChatManagerProps) {
   const collapsible = displayOptions?.collapsible ?? false;
   const isResizable = displayOptions?.isResizable ?? false;
@@ -579,7 +581,7 @@ export function ChatManager({
                     </div>
                   )}
 
-                  {thinkingContent && (() => {
+                  {showReasoning && thinkingContent && (() => {
                     const tStyles = messageStyle.thinkingStepStyles || {};
                     const thContainerStyle = tStyles.containerStyle;
                     const thIconStyles = tStyles.iconStyles || {};
@@ -648,7 +650,7 @@ export function ChatManager({
                     </div>
                   ) : null}
 
-                  {hasTool && (
+                  {showToolCalls && hasTool && (
                     <div className="mt-3 flex flex-col gap-2 w-full min-w-0 max-w-full">
                       {toolInvocations.map((tool: any) => {
                         // When this is an A2UI tool call, show a status pill.

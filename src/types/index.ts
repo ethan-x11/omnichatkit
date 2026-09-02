@@ -262,6 +262,8 @@ export type ChatManagerBaseProps = {
   collapsibleA2UI?: boolean; // Used when layout is 'split'
   maxInputCharacter?: number;
   streaming?: boolean;
+  showToolCalls?: boolean;
+  showReasoning?: boolean;
 };
 
 export type ChatManagerProps = ChatManagerBaseProps & (
