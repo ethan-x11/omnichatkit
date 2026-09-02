@@ -289,14 +289,6 @@ export interface SessionManagerProps {
   sessionManagerComponentStyles?: SessionManagerComponentStyles;
 }
 
-export interface A2UIProps {
-  catalog?: A2UICatalog;
-  a2uiRenderingOption: 'chat' | 'detached';
-  a2uiToolName: string;
-  a2uiVersion?: 'V0.8' | 'V0.9' | 'V0.9.1' | 'V1.0';
-  includeBasicCatalog?: boolean;
-}
-
 type OmniChatBaseProps = {
   theme?: ChatTheme;
   apiEndpoint?: string;
@@ -305,8 +297,8 @@ type OmniChatBaseProps = {
   sessionRoute?: string;
   children?: ReactNode;
 } & (
-  | { useA2UI?: true; a2uiProps: A2UIProps }
-  | { useA2UI: false; a2uiProps?: never }
+  | { useA2UI?: true; a2uiRenderingOption: 'chat' | 'detached' }
+  | { useA2UI: false; a2uiRenderingOption?: never }
 );
 
 /**
@@ -328,7 +320,12 @@ export type OmniChatProps = OmniChatBaseProps & (
 );
 
 export interface A2UICanvasProps {
-  layout: A2UILayout;
+  agentId: string;
+  a2uiToolName: string;
+  a2uiVersion?: 'V0.8' | 'V0.9' | 'V0.9.1' | 'V1.0';
+  includeBasicCatalog?: boolean;
+  layout?: A2UILayout;
+  catalog?: A2UICatalog;
 }
 
 export interface HITLState {

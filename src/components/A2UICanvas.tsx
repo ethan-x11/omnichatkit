@@ -1,28 +1,42 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { AIChatContext } from './AIChatProvider';
 import { AGUIChatContext } from './AGUIChatProvider';
 import { useAIChatStore } from '../store/useAIChatStore';
 import { catalog as internalCatalog } from './a2ui';
+import { A2UICanvasProps } from '../types';
 
-interface Props {
-  componentPayload?: {
-    name: string;
-    props: Record<string, any>;
-  };
-}
+export function A2UICanvas({
+  agentId,
+  a2uiToolName,
+  a2uiVersion,
+  catalog: userCatalog,
+  includeBasicCatalog = true,
+  layout,
+}: A2UICanvasProps) {
+  const setCatalog = useAIChatStore((state) => state.setCatalog);
+  const setIncludeBasicCatalog = useAIChatStore((state) => state.setIncludeBasicCatalog);
+  const setA2uiToolName = useAIChatStore((state) => state.setA2uiToolName);
+  const setA2uiVersion = useAIChatStore((state) => state.setA2uiVersion);
 
-export function A2UICanvas({ componentPayload }: Props) {
+  // Sync A2UI configuration into the global store
+  useEffect(() => {
+    setA2uiToolName(a2uiToolName);
+    setIncludeBasicCatalog(includeBasicCatalog);
+    if (userCatalog) setCatalog(userCatalog);
+    if (a2uiVersion) setA2uiVersion(a2uiVersion);
+  }, [a2uiToolName, a2uiVersion, includeBasicCatalog, userCatalog, setA2uiToolName, setIncludeBasicCatalog, setCatalog, setA2uiVersion]);
+
   const globalCatalog = useAIChatStore((state) => state.catalog);
-  const includeBasicCatalog = useAIChatStore((state) => state.includeBasicCatalog);
-  const a2uiToolName = useAIChatStore((state) => state.a2uiToolName);
+  const storeIncludeBasicCatalog = useAIChatStore((state) => state.includeBasicCatalog);
+  const storeA2uiToolName = useAIChatStore((state) => state.a2uiToolName);
 
   // Merge internal catalog with user-provided catalog
   const catalog = useMemo(() => ({
-    ...(includeBasicCatalog ? internalCatalog : {}),
+    ...(storeIncludeBasicCatalog ? internalCatalog : {}),
     ...globalCatalog,
-  }), [globalCatalog, includeBasicCatalog]);
+  }), [globalCatalog, storeIncludeBasicCatalog]);
 
   const aiContext = React.useContext(AIChatContext);
   const aguiContext = React.useContext(AGUIChatContext);
@@ -34,8 +48,8 @@ export function A2UICanvas({ componentPayload }: Props) {
 
   const { messages } = context;
 
-  // If no payload is provided via props, find the latest tool invocation matching the a2uiToolName
-  const payloadToRender = componentPayload || useMemo(() => {
+  // Find the latest tool invocation matching the a2uiToolName
+  const payloadToRender = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       // Prefer parts (new API). Fall back to toolInvocations for AG-UI messages.
@@ -46,7 +60,7 @@ export function A2UICanvas({ componentPayload }: Props) {
       if (invocations.length > 0) {
         for (let j = invocations.length - 1; j >= 0; j--) {
           const tool = invocations[j];
-          if (tool.toolName === a2uiToolName) {
+          if (tool.toolName === storeA2uiToolName) {
             return {
               // Try to extract component name from args, fallback to toolName
               name: tool.args.componentName || tool.args.name || tool.toolName,
@@ -58,7 +72,7 @@ export function A2UICanvas({ componentPayload }: Props) {
       }
     }
     return null;
-  }, [messages, a2uiToolName]);
+  }, [messages, storeA2uiToolName]);
 
   if (!payloadToRender) return null;
 
@@ -70,7 +84,7 @@ export function A2UICanvas({ componentPayload }: Props) {
   }
 
   return (
-    <div className="a2ui-container w-full p-4 rounded-md border bg-card text-card-foreground shadow-sm">
+    <div className="a2ui-container w-full p-4 rounded-md border bg-card text-card-foreground shadow-sm" data-layout={layout ?? 'inline'}>
       <Component props={payloadToRender.props} />
     </div>
   );

@@ -9,7 +9,7 @@ export function OmniChat({
   api_mode,
   theme,
   useA2UI = true,
-  a2uiProps,
+  a2uiRenderingOption,
   apiEndpoint,
   chatApiSchema,
   chatManagerProps,
@@ -18,26 +18,16 @@ export function OmniChat({
   children
 }: OmniChatProps) {
   
-  const setCatalog = useAIChatStore((state) => state.setCatalog);
-  const setIncludeBasicCatalog = useAIChatStore((state) => state.setIncludeBasicCatalog);
-  const setA2uiToolName = useAIChatStore((state) => state.setA2uiToolName);
-  const setA2uiVersion = useAIChatStore((state) => state.setA2uiVersion);
   const setApiMode = useAIChatStore((state) => state.setApiMode);
   const setChatApiSchema = useAIChatStore((state) => state.setChatApiSchema);
 
   useEffect(() => {
     setApiMode(api_mode);
     setChatApiSchema(api_mode === 'classic' ? chatApiSchema : undefined);
-    if (useA2UI && a2uiProps) {
-      if (a2uiProps.catalog) setCatalog(a2uiProps.catalog);
-      if (a2uiProps.includeBasicCatalog !== undefined) setIncludeBasicCatalog(a2uiProps.includeBasicCatalog);
-      if (a2uiProps.a2uiToolName) setA2uiToolName(a2uiProps.a2uiToolName);
-      if (a2uiProps.a2uiVersion) setA2uiVersion(a2uiProps.a2uiVersion);
-    }
-  }, [api_mode, chatApiSchema, useA2UI, a2uiProps, setApiMode, setChatApiSchema, setCatalog, setIncludeBasicCatalog, setA2uiToolName, setA2uiVersion]);
+  }, [api_mode, chatApiSchema, setApiMode, setChatApiSchema]);
   
   // Map OmniChat prop 'a2uiRenderingOption' to ChatManager 'layout'
-  const chatLayout: A2UILayout = (useA2UI && a2uiProps?.a2uiRenderingOption === 'detached') ? 'split' : 'inline';
+  const chatLayout: A2UILayout = (useA2UI && a2uiRenderingOption === 'detached') ? 'split' : 'inline';
 
   // Select the appropriate provider based on api_mode
   const Provider = api_mode === 'ag-ui' ? AGUIChatProvider : AIChatProvider;
