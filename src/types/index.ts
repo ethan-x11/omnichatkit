@@ -56,6 +56,70 @@ export interface AIChatServerOptions {
   headers?: Record<string, string>;
 }
 
+// ---------------------------------------------------------------------------
+// ApiSchema — maps OmniChatKit's internal message shape to a custom backend
+// ---------------------------------------------------------------------------
+
+/**
+ * Describes how to serialize the outbound chat payload before it is sent to
+ * the backend. Each field is an optional key that overrides the default field
+ * name used by the Vercel AI SDK `useChat` body.
+ *
+ * Example — if your API expects `{ query, history }` instead of `{ messages }`:
+ * ```ts
+ * apiRequestSchema: {
+ *   messagesKey: 'history',
+ *   userMessageKey: 'query',
+ *   transform: (payload) => ({ query: payload.messages.at(-1)?.content, history: payload.messages }),
+ * }
+ * ```
+ */
+export interface ApiRequestSchema {
+  /** The top-level key used for the messages array (default: `'messages'`). */
+  messagesKey?: string;
+  /** The key used for a single user message string (default: `'content'`). */
+  userMessageKey?: string;
+  /** Additional static fields merged into every request body. */
+  extraBody?: Record<string, unknown>;
+  /**
+   * Full custom serializer. When provided, receives the default payload and
+   * must return the final body object that will be JSON-stringified and sent.
+   */
+  transform?: (payload: Record<string, unknown>) => Record<string, unknown>;
+}
+
+/**
+ * Describes how to deserialize the backend response back into the internal
+ * `Message` shape consumed by OmniChatKit.
+ *
+ * Example — if your API returns `{ reply: string, metadata: object }`:
+ * ```ts
+ * apiResponseSchema: {
+ *   contentPath: 'reply',
+ *   transform: (raw) => ({ role: 'assistant', content: raw.reply }),
+ * }
+ * ```
+ */
+export interface ApiResponseSchema {
+  /**
+   * Dot-separated path to the assistant message text within the JSON response
+   * (default: `'content'`).
+   * E.g. `'data.message.text'` resolves `response.data.message.text`.
+   */
+  contentPath?: string;
+  /**
+   * Full custom deserializer. When provided, receives the raw parsed JSON and
+   * must return a partial `Message`-compatible object.
+   */
+  transform?: (raw: Record<string, unknown>) => Partial<{ role: string; content: string; [key: string]: unknown }>;
+}
+
+/** Combined schema that pairs a request serializer with a response deserializer. */
+export interface ApiSchema {
+  apiRequestSchema?: ApiRequestSchema;
+  apiResponseSchema?: ApiResponseSchema;
+}
+
 export interface AIChatProviderProps {
   children: ReactNode;
   theme?: ChatTheme;
@@ -64,6 +128,8 @@ export interface AIChatProviderProps {
   sessionId?: string;
   sessionStorageMode?: StorageMode;
   sessionRoute?: string;
+  /** Schema that maps OmniChatKit's internal message format to the backend API. Only used in `classic` mode. */
+  chatApiSchema?: ApiSchema;
 }
 
 export type ToggleButtonPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
@@ -231,8 +297,7 @@ export interface A2UIProps {
   includeBasicCatalog?: boolean;
 }
 
-export type OmniChatProps = {
-  api_mode: 'ag-ui' | 'classic';
+type OmniChatBaseProps = {
   theme?: ChatTheme;
   apiEndpoint?: string;
   chatManagerProps?: Omit<Partial<ChatManagerProps>, 'theme' | 'useA2UI' | 'layout' | 'a2uiToolName'>;
@@ -242,6 +307,24 @@ export type OmniChatProps = {
 } & (
   | { useA2UI?: true; a2uiProps: A2UIProps }
   | { useA2UI: false; a2uiProps?: never }
+);
+
+/**
+ * Props for `<OmniChat />`. The `chatApiSchema` prop is only accepted (and only
+ * meaningful) when `api_mode` is `'classic'`.
+ */
+export type OmniChatProps = OmniChatBaseProps & (
+  | {
+      api_mode: 'classic';
+      /**
+       * Maps OmniChatKit's internal message structure to your backend API's
+       * request/response shape. Provide `apiRequestSchema` to customize how
+       * messages are serialized before being sent, and `apiResponseSchema` to
+       * customize how the raw API response is parsed back into messages.
+       */
+      chatApiSchema?: ApiSchema;
+    }
+  | { api_mode: 'ag-ui'; chatApiSchema?: never }
 );
 
 export interface A2UICanvasProps {

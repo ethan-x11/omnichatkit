@@ -14,7 +14,7 @@ export type ChatContextHelpers = UseChatHelpers & {
 
 export const AIChatContext = createContext<ChatContextHelpers | null>(null);
 
-export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/api/chat', agentId, sessionId, sessionStorageMode = 'disabled', sessionRoute = '/session' }: AIChatProviderProps) {
+export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/api/chat', agentId, sessionId, sessionStorageMode = 'disabled', sessionRoute = '/session', chatApiSchema }: AIChatProviderProps) {
   const setTheme = useAIChatStore((state) => state.setTheme);
   const setSessionStorageMode = useAIChatStore((state) => state.setSessionStorageMode);
   const setSessionRoute = useAIChatStore((state) => state.setSessionRoute);
@@ -43,10 +43,30 @@ export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/a
   const sessionsEnabled = sessionStorageMode !== 'disabled';
   const effectiveSessionId = sessionsEnabled ? activeSessionId ?? sessionId : undefined;
 
+  // Build a stable prepareRequestBody function when chatApiSchema.apiRequestSchema is provided
+  const prepareRequestBody = React.useMemo(() => {
+    const reqSchema = chatApiSchema?.apiRequestSchema;
+    if (!reqSchema) return undefined;
+
+    return (params: { messages: any[]; requestBody?: Record<string, unknown> }) => {
+      const { messagesKey = 'messages', userMessageKey, extraBody, transform } = reqSchema;
+      const base: Record<string, unknown> = {
+        ...extraBody,
+        [messagesKey]: params.messages,
+        ...(userMessageKey
+          ? { [userMessageKey]: params.messages.at(-1)?.content ?? '' }
+          : {}),
+        ...(params.requestBody ?? {}),
+      };
+      return transform ? transform(base) : base;
+    };
+  }, [chatApiSchema]);
+
   // Initialize Vercel AI SDK chat
   const chatHelpers = useChat({
     api: finalApiRoute,
     body: effectiveSessionId ? { sessionId: effectiveSessionId } : undefined,
+    ...(prepareRequestBody ? { prepareRequestBody } : {}),
     // Add additional AI SDK configurations here
   });
   const titleResponseRef = React.useRef('');

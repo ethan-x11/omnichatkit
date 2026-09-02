@@ -126,7 +126,120 @@ export async function POST(req: Request) {
 }
 ```
 
-### 4. Customizing ChatManager
+### 4. `chatApiSchema` — Custom Backend Mapping (`classic` mode)
+
+When `api_mode="classic"`, OmniChatKit uses the Vercel AI SDK's `useChat` hook under the hood, which sends messages in its own standard body shape. If your backend API expects a **different request/response format**, pass a `chatApiSchema` prop to `<OmniChat>` to act as a transparent mapper between the two.
+
+```tsx
+<OmniChat
+  api_mode="classic"
+  apiEndpoint="/api/my-custom-agent"
+  chatApiSchema={{
+    apiRequestSchema: { /* how to serialize the outbound request */ },
+    apiResponseSchema: { /* how to deserialize the inbound response */ },
+  }}
+>
+  <ChatManager useA2UI={false} a2uiToolName="" />
+</OmniChat>
+```
+
+> [!NOTE]
+> `chatApiSchema` is a **compile-time narrowed prop** — TypeScript will reject it (type error) if you pass it while `api_mode="ag-ui"`.
+
+#### `apiRequestSchema`
+
+Controls how the outgoing payload is built before each request.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `messagesKey` | `string` | `"messages"` | Top-level key used for the messages array in the body |
+| `userMessageKey` | `string` | — | If set, adds an extra key containing only the latest user message text |
+| `extraBody` | `Record<string, unknown>` | — | Static fields merged into every request body |
+| `transform` | `(payload) => payload` | — | Full custom serializer — receives the default payload, returns the final body |
+
+**Example — rename the messages array and add a static model field:**
+
+```ts
+chatApiSchema: {
+  apiRequestSchema: {
+    messagesKey: 'history',
+    extraBody: { model: 'gpt-4o', temperature: 0.7 },
+  },
+}
+// Sends: { history: [...messages], model: 'gpt-4o', temperature: 0.7 }
+```
+
+**Example — completely custom body using `transform`:**
+
+```ts
+chatApiSchema: {
+  apiRequestSchema: {
+    transform: (payload) => ({
+      query: (payload.messages as any[]).at(-1)?.content ?? '',
+      context: payload.messages,
+      stream: true,
+    }),
+  },
+}
+// Sends: { query: "latest user message", context: [...], stream: true }
+```
+
+#### `apiResponseSchema`
+
+Controls how the raw API JSON response is mapped back into OmniChatKit's internal message shape.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `contentPath` | `string` | `"content"` | Dot-separated path to the assistant text inside the response JSON |
+| `transform` | `(raw) => Partial<Message>` | — | Full custom deserializer — receives the raw parsed JSON, returns a message-compatible object |
+
+**Example — your API returns `{ reply: "..." }` instead of `{ content: "..." }`:**
+
+```ts
+chatApiSchema: {
+  apiResponseSchema: {
+    contentPath: 'reply',
+  },
+}
+```
+
+**Example — nested path `data.message.text`:**
+
+```ts
+chatApiSchema: {
+  apiResponseSchema: {
+    contentPath: 'data.message.text',
+  },
+}
+```
+
+**Example — full custom transform:**
+
+```ts
+chatApiSchema: {
+  apiResponseSchema: {
+    transform: (raw) => ({
+      role: 'assistant',
+      content: (raw as any).output?.text ?? '',
+    }),
+  },
+}
+```
+
+#### Accessing `chatApiSchema` from other components
+
+The schema is also stored in the global Zustand store so any downstream component or hook can read it without prop-drilling:
+
+```ts
+import { useAIChatStore } from 'omnichatkit';
+
+const chatApiSchema = useAIChatStore((s) => s.chatApiSchema);
+// chatApiSchema?.apiRequestSchema, chatApiSchema?.apiResponseSchema
+```
+
+---
+
+### 5. Customizing ChatManager
 
 The `ChatManager` component comes with extensive styling and layout capabilities.
 
@@ -232,7 +345,7 @@ import { User, Bot } from 'lucide-react';
 />
 ```
 
-### 5. Customizing SessionManager
+### 6. Customizing SessionManager
 
 The `SessionManager` handles chat history.
 
@@ -268,7 +381,7 @@ Use `sessionManagerComponentStyles.listStyle` to replace the list icons or style
 />
 ```
 
-### 6. `useChatContext` â€” Auto Context Hook
+### 7. `useChatContext` â€” Auto Context Hook
 
 `useChatContext` is a convenience hook that automatically resolves the correct chat context based on whichever provider (`AIChatProvider` or `AGUIChatProvider`) is present in the React tree. Use it instead of calling `useAIChatContext` or `useAGUIChatContext` directly.
 
@@ -300,7 +413,7 @@ function MyCustomChatUI() {
 > [!NOTE]
 > `useChatContext` is safe to use immediately on first render. It reads context values synchronously from the React tree rather than relying on the store's `apiMode` value, which is set via `useEffect` and would not be available on the initial render.
 
-### 7. Working with AI Reasoning (e.g. DeepSeek `<think>`)
+### 8. Working with AI Reasoning (e.g. DeepSeek `<think>`)
 OmniChatKit automatically parses and extracts `<think>` tags from incoming model streams. It strips these out of the primary text response and renders them natively as a beautiful, collapsible "Reasoning" accordion inside the message block! No extra configuration is required.
 
 ---

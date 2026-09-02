@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { A2UICatalog, ChatTheme, StorageMode } from '../types';
+import { A2UICatalog, ApiSchema, ChatTheme, StorageMode } from '../types';
 
 export type Role = 'system' | 'user' | 'assistant' | 'tool';
 export type HITLStatus = 'none' | 'pending' | 'approved' | 'rejected';
@@ -179,6 +179,8 @@ interface AIChatState {
   a2uiToolName: string;
   a2uiVersion: 'V0.8' | 'V0.9' | 'V0.9.1' | 'V1.0';
   apiMode: 'classic' | 'ag-ui';
+  /** Schema that maps OmniChatKit's internal message format to the backend API (classic mode only). */
+  chatApiSchema: ApiSchema | undefined;
   setCatalog: (catalog: A2UICatalog) => void;
   setTheme: (theme: ChatTheme) => void;
   setSessionStorageMode: (mode: StorageMode) => void;
@@ -187,6 +189,7 @@ interface AIChatState {
   setA2uiToolName: (name: string) => void;
   setA2uiVersion: (version: 'V0.8' | 'V0.9' | 'V0.9.1' | 'V1.0') => void;
   setApiMode: (mode: 'classic' | 'ag-ui') => void;
+  setChatApiSchema: (schema: ApiSchema | undefined) => void;
   
   pendingHITLAction: any | null;
   setPendingHITLAction: (action: any | null) => void;
@@ -220,6 +223,7 @@ export const useAIChatStore = create<AIChatState>()(
       a2uiToolName: 'renderComponent',
       a2uiVersion: 'V0.9', // Default version
       apiMode: 'classic',
+      chatApiSchema: undefined,
       setCatalog: (catalog) => set({ catalog }),
       setTheme: (theme) => set({ theme }),
       setSessionStorageMode: (mode) => set(mode === 'disabled'
@@ -231,6 +235,7 @@ export const useAIChatStore = create<AIChatState>()(
       setA2uiToolName: (name) => set({ a2uiToolName: name }),
       setA2uiVersion: (version) => set({ a2uiVersion: version }),
       setApiMode: (mode) => set({ apiMode: mode }),
+      setChatApiSchema: (schema) => set({ chatApiSchema: schema }),
       
       pendingHITLAction: null,
       setPendingHITLAction: (action) => set({ pendingHITLAction: action }),
