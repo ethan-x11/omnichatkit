@@ -5,7 +5,7 @@ import { AIChatContext } from './AIChatProvider';
 import { AGUIChatContext } from './AGUIChatProvider';
 import { catalog as preBuiltCustomCatalog } from './a2ui';
 import { surfaceBus, type A2UIOp } from './a2ui/surface-bus';
-import { A2UIProps } from '../types';
+import { A2UICanvasProps } from '../types';
 import { useAIChatStore } from '../store/useAIChatStore';
 
 // ---------------------------------------------------------------------------
@@ -119,6 +119,29 @@ function resolveProps(
 }
 
 // ---------------------------------------------------------------------------
+// Error Boundary for Generative UI
+// ---------------------------------------------------------------------------
+class NodeErrorBoundary extends React.Component<{ children: React.ReactNode, componentName: string }, { hasError: boolean, error: any }> {
+  constructor(props: { children: React.ReactNode, componentName: string }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-2 border border-destructive/50 bg-destructive/10 text-destructive text-xs rounded m-1">
+          <strong>Error in {this.props.componentName}:</strong> {String(this.state.error?.message || this.state.error)}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Recursive renderer
 // ---------------------------------------------------------------------------
 
@@ -174,12 +197,14 @@ function RenderNode({
   );
 
   return (
-    <Component
-      key={nodeId}
-      props={resolvedProps}
-      dispatch={dispatch}
-      children={childrenFn}
-    />
+    <NodeErrorBoundary componentName={node.component}>
+      <Component
+        key={nodeId}
+        props={resolvedProps}
+        dispatch={dispatch}
+        children={childrenFn}
+      />
+    </NodeErrorBoundary>
   );
 }
 
@@ -187,11 +212,7 @@ function RenderNode({
 // Main component
 // ---------------------------------------------------------------------------
 
-export interface A2UICanvasProps {
-  emptyState?: React.ReactNode;
-}
-
-export function A2UICanvas({ emptyState }: A2UICanvasProps = {}) {
+export function A2UICanvas({ emptyState, className, style }: A2UICanvasProps = {}) {
   const a2uiProps = useAIChatStore((state) => state.a2uiProps);
   const {
     agentId,
@@ -337,7 +358,7 @@ export function A2UICanvas({ emptyState }: A2UICanvasProps = {}) {
   if (!surface || !surface.rootId) {
     if (emptyState) {
       return (
-        <div className="h-full flex flex-col items-center justify-center p-8">
+        <div className={`h-full flex flex-col items-center justify-center p-8 ${className || ''}`} style={style}>
           {emptyState}
         </div>
       );
@@ -347,7 +368,8 @@ export function A2UICanvas({ emptyState }: A2UICanvasProps = {}) {
 
   return (
     <div
-      className="a2ui-canvas w-full rounded-md border bg-card text-card-foreground shadow-sm overflow-auto"
+      className={`a2ui-canvas w-full rounded-md border bg-card text-card-foreground shadow-sm overflow-auto ${className || ''}`}
+      style={style}
       data-layout={layout ?? 'inline'}
       data-surface-id={surface.surfaceId}
       data-a2ui-version={a2uiVersion}

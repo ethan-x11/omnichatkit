@@ -325,6 +325,12 @@ export interface A2UIProps {
   catalog?: A2UICatalog;
 }
 
+export interface A2UICanvasProps {
+  emptyState?: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
 export interface HITLState {
   isActive: boolean;
   pendingAction: any | null;

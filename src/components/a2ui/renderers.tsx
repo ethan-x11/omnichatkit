@@ -6,7 +6,7 @@ import {
   Bar,
   BarChart as RBarChart,
   CartesianGrid,
-  Cell,
+  Sector,
   LabelList,
   Line,
   LineChart as RLineChart,
@@ -741,10 +741,11 @@ const HorizontalBarChart = ({
             content={<ChartTooltipContent indicator="dashed" />}
             cursor={{ fill: "var(--lilac-softer)" }}
           />
-          <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
-            ))}
+          <Bar 
+            dataKey="value" 
+            radius={[0, 6, 6, 0]}
+            shape={(props: any) => <Rectangle {...props} fill={CHART_PALETTE[props.index % CHART_PALETTE.length]} />}
+          >
             <LabelList
               dataKey="value"
               position="right"
@@ -855,11 +856,8 @@ const DonutChart = ({
               paddingAngle={1.5}
               stroke="var(--surface)"
               strokeWidth={2}
-            >
-              {data.map((_, i) => (
-                <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />
-              ))}
-            </Pie>
+              shape={(props: any) => <Sector {...props} fill={CHART_PALETTE[props.index % CHART_PALETTE.length]} />}
+            />
           </PieChart>
         </ChartContainer>
         {/* Total in the middle of the donut */}
@@ -1117,11 +1115,17 @@ const CatalogPieChart = ({ props, children }: RendererProps<{ data: Series; heig
     <div style={{ width: "100%", height: props.height ?? 240 }}>
       <ChartContainer config={{ value: { label: "Value", color: "var(--lilac)" } }} className="h-full w-full">
         <PieChart>
-          <Pie data={data} dataKey="value" nameKey="label" cx="50%" cy="50%" outerRadius={80} fill="var(--color-value)" label>
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
-            ))}
-          </Pie>
+          <Pie 
+            data={data} 
+            dataKey="value" 
+            nameKey="label" 
+            cx="50%" 
+            cy="50%" 
+            outerRadius={80} 
+            fill="var(--color-value)" 
+            label
+            shape={(props: any) => <Sector {...props} fill={CHART_PALETTE[props.index % CHART_PALETTE.length]} />}
+          />
           <ChartTooltip content={<ChartTooltipContent />} />
         </PieChart>
       </ChartContainer>
@@ -1666,11 +1670,12 @@ const RadialChart = ({ props }: RendererProps<{ data: Series; height?: number }>
       <ChartContainer config={{ value: { label: "Value", color: "var(--lilac)" } }} className="mx-auto aspect-square h-full w-full max-h-[250px]">
         <RRadialChart data={data} innerRadius="30%" outerRadius="100%">
           <ChartTooltip cursor={false} content={<ChartTooltipContent nameKey="label" />} />
-          <RadialBar dataKey="value" background={{ fill: "var(--surface-soft)" }} cornerRadius={4}>
-            {data.map((_, i) => (
-              <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />
-            ))}
-          </RadialBar>
+          <RadialBar 
+            dataKey="value" 
+            background={{ fill: "var(--surface-soft)" }} 
+            cornerRadius={4}
+            shape={(props: any) => <Sector {...props} fill={CHART_PALETTE[props.index % CHART_PALETTE.length]} />}
+          />
         </RRadialChart>
       </ChartContainer>
     </div>
