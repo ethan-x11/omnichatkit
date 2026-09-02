@@ -16,30 +16,30 @@ import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
 const renderBadge = (
-  text: string | React.ReactNode, 
-  styleProp?: any, 
-  defaultContainerClass?: string, 
+  text: string | React.ReactNode,
+  styleProp?: any,
+  defaultContainerClass?: string,
   defaultTextClass?: string,
   defaultIcon?: React.ReactNode
 ) => {
   if (!text) return null;
   const isString = typeof styleProp === 'string';
   const isObj = typeof styleProp === 'object' && styleProp !== null;
-  
+
   const containerClass = cn(
     defaultContainerClass,
     isString ? styleProp : (isObj && typeof styleProp.containerStyle === 'string' ? styleProp.containerStyle : undefined)
   );
   const containerStyle = isObj && typeof styleProp.containerStyle === 'object' ? styleProp.containerStyle : undefined;
-  
+
   const textClass = cn(
     defaultTextClass,
     isObj && typeof styleProp.textStyle === 'string' ? styleProp.textStyle : undefined
   );
   const textStyle = isObj && typeof styleProp.textStyle === 'object' ? styleProp.textStyle : undefined;
-  
+
   const icon = isObj && styleProp.icon !== undefined ? styleProp.icon : defaultIcon;
-  
+
   return (
     <span className={containerClass} style={containerStyle}>
       {icon}
@@ -48,10 +48,10 @@ const renderBadge = (
   );
 };
 
-export function ChatManager({ 
-  theme, 
-  useA2UI = true, 
-  layout = 'split', 
+export function ChatManager({
+  theme,
+  useA2UI = true,
+  layout = 'split',
   className,
   style,
   chatManagerComponentStyles = {},
@@ -70,7 +70,8 @@ export function ChatManager({
   agentId,
   a2uiPosition = 'left',
   collapsibleA2UI = false,
-  maxInputCharacter
+  maxInputCharacter,
+  streaming
 }: ChatManagerProps) {
   const {
     messageStyle = {},
@@ -93,7 +94,7 @@ export function ChatManager({
   const sessionsEnabled = sessionStorageMode !== 'disabled';
 
   const activeSessionIdRef = React.useRef(activeSessionId);
-  
+
   React.useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
@@ -102,7 +103,7 @@ export function ChatManager({
     if (sessionsEnabled && activeSessionIdRef.current && context?.messages) {
       const session = useAIChatStore.getState().sessions.find(s => s.id === activeSessionIdRef.current);
       const hasExistingMessages = session?.messages && session.messages.length > 0;
-      
+
       if (context.messages.length === 0 && hasExistingMessages) {
         // Prevent wiping out existing session messages with an empty array on mount or during transitions
         return;
@@ -154,8 +155,8 @@ export function ChatManager({
       else if (position === 'left') newDim = startDim + delta;
       else if (position === 'bottom') newDim = startDim - delta;
       else if (position === 'top') newDim = startDim + delta;
-      
-      if (newDim < 250) newDim = 250; 
+
+      if (newDim < 250) newDim = 250;
       if (newDim > Math.max(800, window.innerWidth * 0.8)) newDim = Math.max(800, window.innerWidth * 0.8);
       setCustomDimension(newDim);
     };
@@ -174,15 +175,15 @@ export function ChatManager({
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
-  
+
   const resolvedTheme = theme || globalTheme;
   const isAgUI = resolvedTheme === 'standard';
-  
+
   const isFloating = display === 'floating';
   const isEmbedded = display === 'embedded';
   const isSheet = !isFloating && !isEmbedded && collapsible;
   const isEmbeddedCollapsible = isEmbedded && collapsible;
-  
+
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (autoScroll) {
@@ -190,18 +191,22 @@ export function ChatManager({
     }
   }, [messages, autoScroll]);
 
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => handleSubmit(e);
+  const handleFormSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+    const options = streaming !== undefined ? { body: { streaming } } : undefined;
+    handleSubmit(e, options);
+  };
 
   const handleChipClick = async (prompt: string) => {
     if (!prompt.trim() || !context?.append) return;
 
     try {
-      await context.append({ role: 'user', content: prompt });
+      const options = streaming !== undefined ? { body: { streaming } } : undefined;
+      await context.append({ role: 'user', content: prompt }, options);
     } catch (error) {
       console.error('Failed to send the prompt chip:', error);
     }
   };
-  
+
   const getTogglePositionStyle = (pos?: string): React.CSSProperties => {
     switch (pos) {
       case 'top-left': return { top: '1.5rem', left: '1.5rem' };
@@ -212,21 +217,21 @@ export function ChatManager({
     }
   };
 
-  const chatContainerClass = isAgUI 
-    ? 'bg-zinc-950 text-zinc-50 border-zinc-800 shadow-2xl' 
+  const chatContainerClass = isAgUI
+    ? 'bg-zinc-950 text-zinc-50 border-zinc-800 shadow-2xl'
     : 'bg-background text-foreground border-border shadow-sm';
 
-  const CollapseIcon = position === 'right' ? PanelRightClose : 
-                       position === 'left' ? PanelLeftClose :
-                       position === 'top' ? ChevronUp : ChevronDown;
+  const CollapseIcon = position === 'right' ? PanelRightClose :
+    position === 'left' ? PanelLeftClose :
+      position === 'top' ? ChevronUp : ChevronDown;
 
-  const A2UICollapseIcon = a2uiPosition === 'right' ? PanelRightClose : 
-                           a2uiPosition === 'left' ? PanelLeftClose :
-                           a2uiPosition === 'top' ? ChevronUp : ChevronDown;
+  const A2UICollapseIcon = a2uiPosition === 'right' ? PanelRightClose :
+    a2uiPosition === 'left' ? PanelLeftClose :
+      a2uiPosition === 'top' ? ChevronUp : ChevronDown;
 
   let sizeClass = 'h-full w-full';
   let embeddedStyle: React.CSSProperties = {};
-  
+
   if (isEmbedded || (!isSheet && !isFloating)) {
     if (position === 'left' || position === 'right') {
       embeddedStyle = { maxWidth: isResizable ? `${customDimension}px` : '450px' };
@@ -242,26 +247,26 @@ export function ChatManager({
   const combinedStyle = { ...embeddedStyle, ...style };
 
   const resizeHandle = isEmbedded && isResizable ? (
-    <div 
+    <div
       className={cn(
         "absolute z-10 hover:bg-foreground/10 transition-colors",
         position === 'right' ? "left-0 top-0 bottom-0 w-1.5 cursor-ew-resize" :
-        position === 'left' ? "right-0 top-0 bottom-0 w-1.5 cursor-ew-resize" :
-        position === 'bottom' ? "top-0 left-0 right-0 h-1.5 cursor-ns-resize" :
-        position === 'top' ? "bottom-0 left-0 right-0 h-1.5 cursor-ns-resize" : ""
+          position === 'left' ? "right-0 top-0 bottom-0 w-1.5 cursor-ew-resize" :
+            position === 'bottom' ? "top-0 left-0 right-0 h-1.5 cursor-ns-resize" :
+              position === 'top' ? "bottom-0 left-0 right-0 h-1.5 cursor-ns-resize" : ""
       )}
       onMouseDown={(e) => startResizing(e, position === 'left' || position === 'right' ? 'width' : 'height')}
     />
   ) : null;
 
   const innerContent = (
-    <div 
-      className={cn(`flex border rounded-xl flex-col relative ${chatContainerClass} ${sizeClass}`, typeof globalBackgroundStyle === 'string' ? globalBackgroundStyle : "", className)} 
-      style={{...(typeof globalBackgroundStyle === 'object' ? globalBackgroundStyle : {}), ...combinedStyle}}
+    <div
+      className={cn(`flex border rounded-xl flex-col relative ${chatContainerClass} ${sizeClass}`, typeof globalBackgroundStyle === 'string' ? globalBackgroundStyle : "", className)}
+      style={{ ...(typeof globalBackgroundStyle === 'object' ? globalBackgroundStyle : {}), ...combinedStyle }}
     >
       {resizeHandle}
       {(isSheet || isFloating || isEmbedded) && (
-        <div 
+        <div
           className={cn("p-4 border-b flex flex-row items-center justify-between shrink-0", typeof headerStyle.backgroundStyle === 'string' ? headerStyle.backgroundStyle : "")}
           style={typeof headerStyle.backgroundStyle === 'object' ? headerStyle.backgroundStyle : undefined}
         >
@@ -274,29 +279,29 @@ export function ChatManager({
           )}
           <div className="flex-1 flex flex-col">
             {isSheet ? (
-               <SheetTitle 
-                 className={typeof headerStyle.titleStyle === 'string' ? headerStyle.titleStyle : typeof labels.labelStyles?.titleStyle === 'string' ? labels.labelStyles.titleStyle : ""}
-                 style={typeof headerStyle.titleStyle === 'object' ? headerStyle.titleStyle : typeof labels.labelStyles?.titleStyle === 'object' ? labels.labelStyles.titleStyle : undefined}
-               >
-                 {labels.title || 'AI Chat'}
-               </SheetTitle>
+              <SheetTitle
+                className={typeof headerStyle.titleStyle === 'string' ? headerStyle.titleStyle : typeof labels.labelStyles?.titleStyle === 'string' ? labels.labelStyles.titleStyle : ""}
+                style={typeof headerStyle.titleStyle === 'object' ? headerStyle.titleStyle : typeof labels.labelStyles?.titleStyle === 'object' ? labels.labelStyles.titleStyle : undefined}
+              >
+                {labels.title || 'AI Chat'}
+              </SheetTitle>
             ) : isFloating ? (
-               <DialogTitle 
-                 className={typeof headerStyle.titleStyle === 'string' ? headerStyle.titleStyle : typeof labels.labelStyles?.titleStyle === 'string' ? labels.labelStyles.titleStyle : ""}
-                 style={typeof headerStyle.titleStyle === 'object' ? headerStyle.titleStyle : typeof labels.labelStyles?.titleStyle === 'object' ? labels.labelStyles.titleStyle : undefined}
-               >
-                 {labels.title || 'AI Chat'}
-               </DialogTitle>
+              <DialogTitle
+                className={typeof headerStyle.titleStyle === 'string' ? headerStyle.titleStyle : typeof labels.labelStyles?.titleStyle === 'string' ? labels.labelStyles.titleStyle : ""}
+                style={typeof headerStyle.titleStyle === 'object' ? headerStyle.titleStyle : typeof labels.labelStyles?.titleStyle === 'object' ? labels.labelStyles.titleStyle : undefined}
+              >
+                {labels.title || 'AI Chat'}
+              </DialogTitle>
             ) : (
-               <h2 
-                 className={cn("font-heading text-base font-medium text-foreground", typeof headerStyle.titleStyle === 'string' ? headerStyle.titleStyle : typeof labels.labelStyles?.titleStyle === 'string' ? labels.labelStyles.titleStyle : "")}
-                 style={typeof headerStyle.titleStyle === 'object' ? headerStyle.titleStyle : typeof labels.labelStyles?.titleStyle === 'object' ? labels.labelStyles.titleStyle : undefined}
-               >
-                 {labels.title || 'AI Chat'}
-               </h2>
+              <h2
+                className={cn("font-heading text-base font-medium text-foreground", typeof headerStyle.titleStyle === 'string' ? headerStyle.titleStyle : typeof labels.labelStyles?.titleStyle === 'string' ? labels.labelStyles.titleStyle : "")}
+                style={typeof headerStyle.titleStyle === 'object' ? headerStyle.titleStyle : typeof labels.labelStyles?.titleStyle === 'object' ? labels.labelStyles.titleStyle : undefined}
+              >
+                {labels.title || 'AI Chat'}
+              </h2>
             )}
             {labels.subtitle && (
-              <span 
+              <span
                 className={cn("text-xs text-muted-foreground", typeof headerStyle.subtitleStyle === 'string' ? headerStyle.subtitleStyle : typeof labels.labelStyles?.subtitleStyle === 'string' ? labels.labelStyles.subtitleStyle : "")}
                 style={typeof headerStyle.subtitleStyle === 'object' ? headerStyle.subtitleStyle : typeof labels.labelStyles?.subtitleStyle === 'object' ? labels.labelStyles.subtitleStyle : undefined}
               >
@@ -317,7 +322,7 @@ export function ChatManager({
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Primary Chat Feed */}
         <div className={`flex flex-col flex-1 h-full min-w-0 ${layout === 'split' && useA2UI ? 'border-r border-inherit' : ''}`}>
-          <div 
+          <div
             className={cn("flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
             style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
           >
@@ -339,8 +344,14 @@ export function ChatManager({
               </div>
             )}
             {messages.map((msg) => {
-              const hasTool = msg.toolInvocations && msg.toolInvocations.length > 0;
-              
+              // Prefer parts (new API) over toolInvocations (deprecated). Fall back for AG-UI
+              // messages that are not Vercel AI SDK messages and won't have parts.
+              const toolParts = (msg.parts ?? []).filter((p: any) => p.type === 'tool-invocation');
+              const toolInvocations: any[] = toolParts.length > 0
+                ? toolParts.map((p: any) => p.toolInvocation)
+                : ((msg as any).toolInvocations ?? []);
+              const hasTool = toolInvocations.length > 0;
+
               if ((msg.role as string) === 'reasoning') {
                 return (
                   <details key={msg.id} className="mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group">
@@ -399,7 +410,7 @@ export function ChatManager({
                     </div>
                   );
                 }
-                
+
                 return (
                   <div key={msg.id} className="mb-4 bg-zinc-100 dark:bg-zinc-900/50 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800">
                     <div className="text-zinc-600 dark:text-zinc-400">
@@ -411,7 +422,7 @@ export function ChatManager({
 
               const isUser = msg.role === 'user';
               const customStyleRaw = isUser ? messageStyle.userMessageStyle : messageStyle.assistantMessageStyle;
-              
+
               let containerStyleClass = '';
               let containerStyleObj: React.CSSProperties | undefined = undefined;
               let bubbleStyleClass = '';
@@ -427,7 +438,7 @@ export function ChatManager({
                   const styleDef = customStyleRaw as any;
                   containerStyleClass = typeof styleDef.containerStyle === 'string' ? styleDef.containerStyle : '';
                   containerStyleObj = typeof styleDef.containerStyle === 'object' ? styleDef.containerStyle : undefined;
-                  
+
                   bubbleStyleClass = typeof styleDef.bubbleStyle === 'string' ? styleDef.bubbleStyle : '';
                   bubbleStyleObj = typeof styleDef.bubbleStyle === 'object' ? styleDef.bubbleStyle : undefined;
 
@@ -452,7 +463,7 @@ export function ChatManager({
 
               let thinkingContent = '';
               let mainContent = msg.content || '';
-              
+
               if (!isUser && typeof mainContent === 'string') {
                 const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|<think\/>)/i;
                 const match = mainContent.match(thinkRegex);
@@ -483,15 +494,15 @@ export function ChatManager({
                         <>
                           {renderBadge(labels.assistantLabel ?? 'AI', badgeStyleRaw, "flex items-center gap-1", "", <Bot size={14} />)}
                           {messageToAgentMap.get(msg.id) && renderBadge(
-                            messageToAgentMap.get(msg.id) as string, 
-                            subAgentBadgeStyleRaw, 
-                            "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1", 
+                            messageToAgentMap.get(msg.id) as string,
+                            subAgentBadgeStyleRaw,
+                            "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1",
                             "text-zinc-700 dark:text-zinc-300",
                             <Bot size={12} />
                           )}
                         </>
                       )}
-                      
+
                     </div>
                   )}
 
@@ -507,30 +518,30 @@ export function ChatManager({
                       </div>
                     </details>
                   )}
-                  
-                  
+
+
                   {(mainContent || (!thinkingContent && !hasTool)) ? (
                     <div className="mt-1 flex flex-col relative min-w-0 max-w-full">
-                      <div 
-                        className={cn("relative z-10 break-words min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass)} 
+                      <div
+                        className={cn("relative z-10 break-words min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass)}
                         style={{
                           ...bubbleStyleObj,
                           ...(alignment === 'right' ? { borderBottomRightRadius: '4px' } : {}),
                           ...(alignment === 'left' ? { borderBottomLeftRadius: '4px' } : {})
                         }}
                       >
-                        <MarkdownRenderer 
-                          text={mainContent} 
+                        <MarkdownRenderer
+                          text={mainContent}
                         />
                       </div>
                       <div className={cn(
                         "opacity-0 group-hover:opacity-100 transition-opacity flex mt-1",
                         alignment === 'right' ? 'justify-end' : 'justify-start'
                       )}>
-                        <Button 
-                          variant="ghost" 
-                          size="icon-sm" 
-                          className="h-6 w-6 text-muted-foreground hover:text-foreground" 
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="h-6 w-6 text-muted-foreground hover:text-foreground"
                           onClick={() => handleCopy(msg.id, msg.content)}
                           title="Copy message"
                         >
@@ -539,22 +550,22 @@ export function ChatManager({
                       </div>
                     </div>
                   ) : null}
-                  
+
                   {hasTool && (
                     <div className="mt-3 flex flex-col gap-2 w-full min-w-0 max-w-full">
-                      {msg.toolInvocations?.map((tool: any) => {
+                      {toolInvocations.map((tool: any) => {
                         if (useA2UI && layout === 'inline' && tool.toolName === a2uiToolName) {
                           return (
-                            <A2UICanvas 
-                              key={tool.toolCallId} 
-                              componentPayload={{ 
-                                name: tool.args.componentName || tool.args.name || tool.toolName, 
-                                props: tool.args.props || tool.args 
-                              }} 
+                            <A2UICanvas
+                              key={tool.toolCallId}
+                              componentPayload={{
+                                name: tool.args.componentName || tool.args.name || tool.toolName,
+                                props: tool.args.props || tool.args
+                              }}
                             />
                           );
                         }
-                        
+
                         return (
                           <details key={tool.toolCallId} className="group [&_summary::-webkit-details-marker]:hidden mb-2">
                             <summary className="flex items-center justify-between cursor-pointer list-none p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/50">
@@ -596,7 +607,7 @@ export function ChatManager({
                 </div>
               );
             })}
-            
+
             {(() => {
               // Extract active lifecycle events
               const runError = events.find((e: any) => {
@@ -621,9 +632,9 @@ export function ChatManager({
                 const stepEvents = events.filter((e: any) => e.type === 'STEP_STARTED' || e.type === 'StepStarted' || e.type === 'STEP_FINISHED' || e.type === 'StepFinished');
                 const lastStep = stepEvents[stepEvents.length - 1];
                 const activeStepName = (lastStep && (lastStep.type === 'STEP_STARTED' || lastStep.type === 'StepStarted')) ? lastStep.stepName : null;
-                
+
                 return (
-                  <div 
+                  <div
                     className={cn("text-sm text-zinc-500 animate-pulse flex items-center gap-2", typeof messageStyle.thinkingStepStyle === 'string' ? messageStyle.thinkingStepStyle : "")}
                     style={typeof messageStyle.thinkingStepStyle === 'object' ? messageStyle.thinkingStepStyle : undefined}
                   >
@@ -636,9 +647,9 @@ export function ChatManager({
             })()}
             <div ref={messagesEndRef} />
           </div>
-          
+
           {promptChips?.promptChipList && promptChips.promptChipList.length > 0 && (promptChips.alwaysShow || messages.length === 0) && (
-            <div 
+            <div
               className={cn("px-4 pb-2 pt-3 flex flex-wrap gap-2 shrink-0 border-t border-inherit", typeof chatManagerComponentStyles?.promptChipStyles?.promptChipContainerStyle === 'string' ? chatManagerComponentStyles.promptChipStyles.promptChipContainerStyle : "")}
               style={typeof chatManagerComponentStyles?.promptChipStyles?.promptChipContainerStyle === 'object' ? chatManagerComponentStyles.promptChipStyles.promptChipContainerStyle : undefined}
             >
@@ -664,14 +675,14 @@ export function ChatManager({
             </div>
           )}
 
-          <form 
-            onSubmit={handleFormSubmit} 
-            className={cn("p-4 flex flex-col gap-2 shrink-0", typeof inputSectionStyle.containerStyle === 'string' ? inputSectionStyle.containerStyle : "", typeof inputSectionStyle.backgroundStyle === 'string' ? inputSectionStyle.backgroundStyle : "", (!promptChips?.promptChipList || promptChips.promptChipList.length === 0 || (!promptChips.alwaysShow && messages.length > 0)) ? "border-t border-inherit" : "")} 
-            style={{...(typeof inputSectionStyle.containerStyle === 'object' ? inputSectionStyle.containerStyle : {}), ...(typeof inputSectionStyle.backgroundStyle === 'object' ? inputSectionStyle.backgroundStyle : {})}}
+          <form
+            onSubmit={handleFormSubmit}
+            className={cn("p-4 flex flex-col gap-2 shrink-0", typeof inputSectionStyle.containerStyle === 'string' ? inputSectionStyle.containerStyle : "", typeof inputSectionStyle.backgroundStyle === 'string' ? inputSectionStyle.backgroundStyle : "", (!promptChips?.promptChipList || promptChips.promptChipList.length === 0 || (!promptChips.alwaysShow && messages.length > 0)) ? "border-t border-inherit" : "")}
+            style={{ ...(typeof inputSectionStyle.containerStyle === 'object' ? inputSectionStyle.containerStyle : {}), ...(typeof inputSectionStyle.backgroundStyle === 'object' ? inputSectionStyle.backgroundStyle : {}) }}
           >
             <div className="flex gap-2 w-full">
-              <Textarea 
-                value={input} 
+              <Textarea
+                value={input}
                 onChange={handleInputChange}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -681,19 +692,19 @@ export function ChatManager({
                     }
                   }
                 }}
-                placeholder={labels.placeholder || "Type a message..."} 
-                className={cn("flex-1 bg-foreground/5 border-transparent shadow-sm focus-visible:bg-transparent", typeof inputSectionStyle.inputStyle === 'string' ? inputSectionStyle.inputStyle : "")} 
+                placeholder={labels.placeholder || "Type a message..."}
+                className={cn("flex-1 bg-foreground/5 border-transparent shadow-sm focus-visible:bg-transparent", typeof inputSectionStyle.inputStyle === 'string' ? inputSectionStyle.inputStyle : "")}
                 style={typeof inputSectionStyle.inputStyle === 'object' ? inputSectionStyle.inputStyle : undefined}
                 suppressHydrationWarning={true}
                 maxLength={maxInputCharacter}
                 {...inputProps as any}
               />
               {isLoading ? (
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   size="icon"
                   onClick={() => context?.stop && context.stop()}
-                  variant={isAgUI ? 'secondary' : 'default'} 
+                  variant={isAgUI ? 'secondary' : 'default'}
                   className={typeof inputSectionStyle.buttonStyle === 'string' ? inputSectionStyle.buttonStyle : ""}
                   style={typeof inputSectionStyle.buttonStyle === 'object' ? inputSectionStyle.buttonStyle : undefined}
                   suppressHydrationWarning={true}
@@ -702,9 +713,9 @@ export function ChatManager({
                   <Square size={16} fill="currentColor" />
                 </Button>
               ) : (
-                <Button 
-                  type="submit" 
-                  variant={isAgUI ? 'secondary' : 'default'} 
+                <Button
+                  type="submit"
+                  variant={isAgUI ? 'secondary' : 'default'}
                   disabled={!input.trim()}
                   className={typeof inputSectionStyle.buttonStyle === 'string' ? inputSectionStyle.buttonStyle : ""}
                   style={typeof inputSectionStyle.buttonStyle === 'object' ? inputSectionStyle.buttonStyle : undefined}
@@ -715,12 +726,12 @@ export function ChatManager({
               )}
             </div>
             {labels.disclaimer !== null && labels.disclaimer !== false && labels.disclaimer !== '' && (
-              <div 
+              <div
                 className={cn("text-xs text-center text-muted-foreground mt-1", typeof labels.labelStyles?.disclaimerStyle === 'string' ? labels.labelStyles.disclaimerStyle : "")}
                 style={typeof labels.labelStyles?.disclaimerStyle === 'object' ? labels.labelStyles.disclaimerStyle : undefined}
               >
-                {labels.disclaimer === undefined 
-                  ? "AI-generated content. Please review and verify critical information independently." 
+                {labels.disclaimer === undefined
+                  ? "AI-generated content. Please review and verify critical information independently."
                   : labels.disclaimer}
               </div>
             )}
@@ -730,8 +741,8 @@ export function ChatManager({
         {/* Split A2UI Canvas Pane */}
         {useA2UI && layout === 'split' && !collapsibleA2UI && (
           <div className="w-1/2 h-full bg-inherit overflow-y-auto p-4 relative shrink-0">
-             {/* Renders the latest UI component requested by the AI in the split pane */}
-             <A2UICanvas />
+            {/* Renders the latest UI component requested by the AI in the split pane */}
+            <A2UICanvas />
           </div>
         )}
       </div>
@@ -740,7 +751,7 @@ export function ChatManager({
 
   const a2uiSheetContent = useA2UI && layout === 'split' && collapsibleA2UI ? (
     <Sheet open={isA2UIOpen} onOpenChange={setIsA2UIOpen}>
-      <SheetTrigger 
+      <SheetTrigger
         render={
           <Button variant="default" size="icon" className="fixed bottom-6 left-6 h-14 w-14 rounded-full shadow-lg z-50">
             <A2UICollapseIcon size={28} />
@@ -749,18 +760,18 @@ export function ChatManager({
       />
       <SheetContent side={a2uiPosition} showCloseButton={false} className="w-[400px] sm:w-[600px] md:w-[800px] flex flex-col p-4 bg-transparent border-none shadow-none">
         <div className={cn(`flex w-full h-full border rounded-xl flex-col`, chatContainerClass)}>
-           <SheetHeader className="p-4 border-b flex flex-row items-center justify-between shrink-0">
-             {(a2uiPosition === 'right' || a2uiPosition === 'bottom') && (
-               <SheetClose render={<Button variant="ghost" size="icon-sm" className="h-8 w-8"><A2UICollapseIcon size={16} /></Button>} />
-             )}
-             <SheetTitle className="flex-1">Dynamic UI</SheetTitle>
-             {(a2uiPosition === 'left' || a2uiPosition === 'top') && (
-               <SheetClose render={<Button variant="ghost" size="icon-sm" className="h-8 w-8"><A2UICollapseIcon size={16} /></Button>} />
-             )}
-           </SheetHeader>
-           <div className="flex-1 overflow-y-auto p-4 relative">
-             <A2UICanvas />
-           </div>
+          <SheetHeader className="p-4 border-b flex flex-row items-center justify-between shrink-0">
+            {(a2uiPosition === 'right' || a2uiPosition === 'bottom') && (
+              <SheetClose render={<Button variant="ghost" size="icon-sm" className="h-8 w-8"><A2UICollapseIcon size={16} /></Button>} />
+            )}
+            <SheetTitle className="flex-1">Dynamic UI</SheetTitle>
+            {(a2uiPosition === 'left' || a2uiPosition === 'top') && (
+              <SheetClose render={<Button variant="ghost" size="icon-sm" className="h-8 w-8"><A2UICollapseIcon size={16} /></Button>} />
+            )}
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto p-4 relative">
+            <A2UICanvas />
+          </div>
         </div>
       </SheetContent>
     </Sheet>
@@ -770,13 +781,13 @@ export function ChatManager({
   const hasToggleLabel = !!toggleButtonLabelProps?.toggleButtonLabel;
 
   const renderToggleButton = (isHidden: boolean = false) => (
-    <Button 
-      variant="default" 
-      size={hasToggleLabel ? "default" : "icon"} 
+    <Button
+      variant="default"
+      size={hasToggleLabel ? "default" : "icon"}
       className={cn(
-        "fixed shadow-lg z-50", 
-        hasToggleLabel ? "rounded-full px-4 h-14" : "h-14 w-14 rounded-full", 
-        isHidden ? "hidden" : "", 
+        "fixed shadow-lg z-50",
+        hasToggleLabel ? "rounded-full px-4 h-14" : "h-14 w-14 rounded-full",
+        isHidden ? "hidden" : "",
         typeof toggleButtonStyle === 'string' ? toggleButtonStyle : ""
       )}
       style={typeof toggleButtonStyle === 'object' ? { ...getTogglePositionStyle(collapseToggleButtonPosition), ...toggleButtonStyle } : getTogglePositionStyle(collapseToggleButtonPosition)}
@@ -823,18 +834,18 @@ export function ChatManager({
     // Neutralize Tailwind's center translations so we can anchor to the corners
     switch (pos) {
       case 'bottom-left':
-      case 'left': 
+      case 'left':
         return { left: '1.5rem', right: 'auto', bottom: '1.5rem', top: 'auto', '--tw-translate-x': '0px', '--tw-translate-y': '0px' } as React.CSSProperties & Record<string, string>;
       case 'bottom-right':
-      case 'right': 
+      case 'right':
         return { right: '1.5rem', left: 'auto', bottom: '1.5rem', top: 'auto', '--tw-translate-x': '0px', '--tw-translate-y': '0px' } as React.CSSProperties & Record<string, string>;
       case 'top-left':
         return { left: '1.5rem', right: 'auto', top: '1.5rem', bottom: 'auto', '--tw-translate-x': '0px', '--tw-translate-y': '0px' } as React.CSSProperties & Record<string, string>;
       case 'top-right':
         return { right: '1.5rem', left: 'auto', top: '1.5rem', bottom: 'auto', '--tw-translate-x': '0px', '--tw-translate-y': '0px' } as React.CSSProperties & Record<string, string>;
-      case 'top': 
+      case 'top':
         return { top: '1.5rem', bottom: 'auto', left: '50%', right: 'auto', '--tw-translate-x': '-50%', '--tw-translate-y': '0px' } as React.CSSProperties & Record<string, string>;
-      case 'bottom': 
+      case 'bottom':
         return { bottom: '1.5rem', top: 'auto', left: '50%', right: 'auto', '--tw-translate-x': '-50%', '--tw-translate-y': '0px' } as React.CSSProperties & Record<string, string>;
       default: return {};
     }
@@ -844,11 +855,11 @@ export function ChatManager({
     return (
       <>
         <Dialog open={isOpen} onOpenChange={setIsOpen} modal={false} disablePointerDismissal={true}>
-          <DialogTrigger 
+          <DialogTrigger
             render={renderToggleButton(isOpen)}
           />
-          <DialogContent 
-            className="flex flex-col overflow-hidden max-w-[90vw] md:max-w-[800px] w-full h-[85vh] p-0 border-none bg-transparent shadow-none" 
+          <DialogContent
+            className="flex flex-col overflow-hidden max-w-[90vw] md:max-w-[800px] w-full h-[85vh] p-0 border-none bg-transparent shadow-none"
             showCloseButton={true}
             showOverlay={false}
             style={getFloatingDialogStyle(collapseToggleButtonPosition)}
@@ -864,7 +875,7 @@ export function ChatManager({
   return (
     <>
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger 
+        <SheetTrigger
           render={renderToggleButton(isOpen)}
         />
         <SheetContent side={position} showCloseButton={false} className="w-[400px] sm:w-[500px] md:w-[600px] flex flex-col p-4 bg-transparent border-none shadow-none">

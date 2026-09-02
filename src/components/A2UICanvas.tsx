@@ -38,9 +38,14 @@ export function A2UICanvas({ componentPayload }: Props) {
   const payloadToRender = componentPayload || useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
-      if (msg.toolInvocations && msg.toolInvocations.length > 0) {
-        for (let j = msg.toolInvocations.length - 1; j >= 0; j--) {
-          const tool = msg.toolInvocations[j];
+      // Prefer parts (new API). Fall back to toolInvocations for AG-UI messages.
+      const toolParts = (msg.parts ?? []).filter((p: any) => p.type === 'tool-invocation');
+      const invocations: any[] = toolParts.length > 0
+        ? toolParts.map((p: any) => p.toolInvocation)
+        : ((msg as any).toolInvocations ?? []);
+      if (invocations.length > 0) {
+        for (let j = invocations.length - 1; j >= 0; j--) {
+          const tool = invocations[j];
           if (tool.toolName === a2uiToolName) {
             return {
               // Try to extract component name from args, fallback to toolName
