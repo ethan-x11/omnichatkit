@@ -41,8 +41,12 @@ export interface ChatLabels {
 export interface WelcomeScreenProps {}
 export type SlotValue<T> = T | ReactNode;
 
-// Extend Vercel AI SDK Message with our own properties if needed
-export interface Message extends AiMessage {
+export interface Message extends Omit<AiMessage, 'role' | 'content'> {
+  role: 'user' | 'assistant' | 'system' | 'tool' | 'developer' | 'activity' | 'reasoning' | string;
+  content?: string | InputContent[];
+  name?: string;
+  encryptedContent?: string;
+  metadata?: Record<string, any>;
   componentPayload?: {
     name: string;
     props: Record<string, any>;
@@ -54,6 +58,56 @@ export interface AIChatServerOptions {
   apiKey: string;
   endpoint?: string;
   headers?: Record<string, string>;
+}
+
+export type InputContent =
+  | TextInputContent
+  | ImageInputContent
+  | AudioInputContent
+  | VideoInputContent
+  | DocumentInputContent;
+
+export interface InputContentDataSource {
+  type: "data";
+  value: string;
+  mimeType: string;
+}
+
+export interface InputContentUrlSource {
+  type: "url";
+  value: string;
+  mimeType?: string;
+}
+
+export type InputContentSource = InputContentDataSource | InputContentUrlSource;
+
+export interface TextInputContent {
+  type: "text";
+  text: string;
+}
+
+export interface ImageInputContent {
+  type: "image";
+  source: InputContentSource;
+  metadata?: Record<string, unknown>;
+}
+
+export interface AudioInputContent {
+  type: "audio";
+  source: InputContentSource;
+  metadata?: Record<string, unknown>;
+}
+
+export interface VideoInputContent {
+  type: "video";
+  source: InputContentSource;
+  metadata?: Record<string, unknown>;
+}
+
+export interface DocumentInputContent {
+  type: "document";
+  source: InputContentSource;
+  metadata?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -184,6 +238,8 @@ export interface ToolCallStepStyles {
 export interface MessageStyles {
   assistantMessageStyles?: React.CSSProperties | string | AssistantMessageContentStyles;
   userMessageStyles?: React.CSSProperties | string | MessageContentStyles;
+  developerMessageStyles?: React.CSSProperties | string | MessageContentStyles;
+  activityMessageStyles?: React.CSSProperties | string | MessageContentStyles;
   thinkingStepStyles?: ThinkingStepStyles;
   toolCallStepStyles?: ToolCallStepStyles;
   stopResponseStyle?: React.CSSProperties | string;
@@ -192,7 +248,22 @@ export interface MessageStyles {
 
 export interface InputStyles {
   inputStyle?: React.CSSProperties | string;
-  buttonStyle?: React.CSSProperties | string;
+  sendButtonStyles?: {
+    icon?: ReactNode;
+    iconStyles?: React.CSSProperties | string;
+    labelStyles?: React.CSSProperties | string;
+    containerStyle?: React.CSSProperties | string;
+  };
+  attachmentMenuStyles?: {
+    plusButtonIcon?: ReactNode;
+    plusButtonIconStyles?: React.CSSProperties | string;
+    plusButtonContainerStyles?: React.CSSProperties | string;
+    menuContainerStyles?: React.CSSProperties | string;
+    menuItemStyles?: React.CSSProperties | string;
+    menuItemIconStyles?: React.CSSProperties | string;
+    previewContainerStyles?: React.CSSProperties | string;
+    previewItemContainerStyles?: React.CSSProperties | string;
+  };
   containerStyle?: React.CSSProperties | string;
   backgroundStyle?: React.CSSProperties | string;
 }
@@ -237,6 +308,7 @@ export type ChatManagerBaseProps = {
   className?: string;
   style?: React.CSSProperties;
   chatManagerComponentStyles?: ChatManagerComponentStyles;
+  inputTypeList?: Array<'image' | 'audio' | 'video' | 'document'>;
   position?: ComponentPosition;
   collapseToggleButtonPosition?: ToggleButtonPosition;
   toggleButtonProps?: {

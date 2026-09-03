@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AIChatContext } from './AIChatProvider';
 import { AGUIChatContext } from './AGUIChatProvider';
 import { useAIChatStore } from '../store/useAIChatStore';
@@ -12,7 +12,7 @@ import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from './ui/sheet';
 import { Skeleton } from './ui/skeleton';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from './ui/dialog';
-import { MessageCircle, PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, Copy, Check, Square, Brain, Wrench, Activity, AlertCircle, PlayCircle, CheckCircle2, User, Bot, ArrowDown } from 'lucide-react';
+import { MessageCircle, PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, Copy, Check, Square, Brain, Wrench, Activity, AlertCircle, PlayCircle, CheckCircle2, User, Bot, ArrowDown, Plus, X, Image as ImageIcon, FileText, Video, Mic, Paperclip, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
@@ -99,7 +99,8 @@ export function ChatManager({
   streaming,
   showToolCalls = true,
   showReasoning = true,
-  sendHistory = true
+  sendHistory = true,
+  inputTypeList
 }: ChatManagerProps) {
   const collapsible = displayOptions?.collapsible ?? false;
   const isResizable = displayOptions?.isResizable ?? false;
@@ -119,7 +120,7 @@ export function ChatManager({
     throw new Error('ChatManager must be used within either an AIChatProvider or an AGUIChatProvider');
   }
 
-  const { messages, input, handleInputChange, handleSubmit, status } = context;
+  const { messages, input, handleInputChange, handleSubmit, status, setInput, append } = context as any;
   const events = (context as any).events || [];
   const { activeSessionId, sessionStorageMode, updateSessionMessages } = useAIChatStore();
   const sessionsEnabled = sessionStorageMode !== 'disabled';
@@ -153,6 +154,65 @@ export function ChatManager({
   const [isA2UIOpen, setIsA2UIOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [customDimension, setCustomDimension] = useState(450);
+
+  // File Attachments State
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<{ type: string; file: File; base64: string }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
+  const [selectedMimeTypeFilter, setSelectedMimeTypeFilter] = useState<string>('*/*');
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(event.target as Node)) {
+        setIsAttachMenuOpen(false);
+      }
+    };
+    
+    if (isAttachMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside, true);
+      document.addEventListener('touchstart', handleClickOutside, true);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('touchstart', handleClickOutside, true);
+    };
+  }, [isAttachMenuOpen]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAttachedFiles(prev => [...prev, {
+          type: file.type,
+          file,
+          base64: reader.result as string
+        }]);
+        setIsAttachMenuOpen(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerFileInput = (accept: string) => {
+    setSelectedMimeTypeFilter(accept);
+    // Use a small timeout to allow state to update before clicking
+    setTimeout(() => {
+      if (fileInputRef.current) {
+        fileInputRef.current.accept = accept;
+        fileInputRef.current.click();
+      }
+    }, 0);
+  };
+  
+  const removeAttachedFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   const messageToAgentMap = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -243,6 +303,44 @@ export function ChatManager({
   }, [messages, autoScroll, userScrolledUp]);
 
   const handleFormSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!input.trim() && attachedFiles.length === 0) return;
+
+    if (attachedFiles.length > 0 && append) {
+      const contentArray: any[] = [];
+      if (input.trim()) {
+        contentArray.push({ type: 'text', text: input.trim() });
+      }
+
+      attachedFiles.forEach(af => {
+        let type = 'document';
+        if (af.type.startsWith('image/')) type = 'image';
+        else if (af.type.startsWith('audio/')) type = 'audio';
+        else if (af.type.startsWith('video/')) type = 'video';
+        
+        // Extract base64 part
+        const base64Value = af.base64.includes(',') ? af.base64.split(',')[1] : af.base64;
+
+        contentArray.push({
+          type,
+          source: {
+            type: 'data',
+            value: base64Value,
+            mimeType: af.type
+          }
+        });
+      });
+      
+      append({
+        role: 'user',
+        content: contentArray
+      });
+      
+      if (setInput) setInput('');
+      setAttachedFiles([]);
+      return;
+    }
+
     const body: Record<string, any> = {};
     if (streaming !== undefined) body.streaming = streaming;
     if (!sendHistory) body.sendHistory = false;
@@ -425,7 +523,7 @@ export function ChatManager({
                 )}
               </div>
             )}
-            {messages.map((msg) => {
+            {messages.map((msg: any) => {
               // Prefer parts (new API) over toolInvocations (deprecated). Fall back for AG-UI
               // messages that are not Vercel AI SDK messages and won't have parts.
               const toolParts = (msg.parts ?? []).filter((p: any) => p.type === 'tool-invocation');
@@ -544,9 +642,26 @@ export function ChatManager({
               const alignmentClass = alignment === 'left' ? 'flex flex-col items-start' : (alignment === 'right' ? 'flex flex-col items-end' : 'flex flex-col items-center text-left whitespace-normal');
 
               let thinkingContent = '';
-              let mainContent = msg.content || '';
+              let mainContent: string = '';
+              let imageContents: any[] = [];
+              let isActivity = (msg.role as string) === 'activity';
+              let isDeveloper = (msg.role as string) === 'developer';
+              let isReasoning = (msg.role as string) === 'reasoning';
 
-              if (!isUser && typeof mainContent === 'string') {
+              if (isUser && Array.isArray(msg.content)) {
+                mainContent = msg.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n\n');
+                imageContents = msg.content.filter((c: any) => c.type === 'image');
+              } else if (isReasoning) {
+                thinkingContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+              } else if (isActivity) {
+                mainContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content, null, 2);
+              } else if (typeof msg.content === 'string') {
+                mainContent = msg.content;
+              } else {
+                mainContent = msg.content ? JSON.stringify(msg.content) : '';
+              }
+
+              if (!isUser && !isReasoning && !isActivity && !isDeveloper && typeof mainContent === 'string') {
                 const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|<think\/>)/i;
                 const match = mainContent.match(thinkRegex);
                 if (match) {
@@ -566,12 +681,34 @@ export function ChatManager({
                 }
               }
 
+              if (isActivity) {
+                const actStyles = (messageStyle as any).activityMessageStyles || {};
+                const actContainerStyleClass = typeof actStyles === 'string' ? actStyles : (typeof actStyles.containerStyle === 'string' ? actStyles.containerStyle : "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg px-4 py-3 text-sm border border-blue-100 dark:border-blue-800 w-full");
+                const actContainerStyleObj = typeof actStyles === 'object' && typeof actStyles.containerStyle === 'object' ? actStyles.containerStyle : {};
+
+                return (
+                  <div key={msg.id} className={cn("mb-4 group relative w-full flex flex-col", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
+                    <div className={actContainerStyleClass} style={actContainerStyleObj}>
+                      <div className="flex items-center gap-2 font-medium mb-1">
+                        <Activity size={14} />
+                        {(msg as any).activityType || 'Activity'}
+                      </div>
+                      <pre className="text-xs overflow-x-auto p-2 bg-white/50 dark:bg-black/20 rounded">
+                        {mainContent}
+                      </pre>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div key={msg.id} className={cn("mb-4 group relative w-full", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
                   {(mainContent || thinkingContent || (!thinkingContent && !hasTool)) && (
                     <div className="font-bold mb-2 flex items-center gap-2 min-w-0 max-w-full">
                       {isUser ? (
                         renderBadge(labels.userLabel ?? 'You', badgeStyleRaw, "flex items-center gap-1", "", <User size={14} />)
+                      ) : isDeveloper ? (
+                        renderBadge('Developer', (messageStyle as any).developerMessageStyles?.badgeStyle || badgeStyleRaw, "flex items-center gap-1", "", <Wrench size={14} />)
                       ) : (
                         <>
                           {renderBadge(labels.assistantLabel ?? 'AI', badgeStyleRaw, "flex items-center gap-1", "", <Bot size={14} />)}
@@ -629,13 +766,16 @@ export function ChatManager({
                   {(mainContent || (!thinkingContent && !hasTool)) ? (
                     <div className="mt-1 flex flex-col relative min-w-0 max-w-full">
                       <div
-                        className={cn("relative z-10 break-words min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass)}
+                        className={cn("relative z-10 break-words min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass, isDeveloper ? "font-mono text-sm" : "")}
                         style={{
                           ...bubbleStyleObj,
                           ...(alignment === 'right' ? { borderBottomRightRadius: '4px' } : {}),
                           ...(alignment === 'left' ? { borderBottomLeftRadius: '4px' } : {})
                         }}
                       >
+                        {imageContents.map((img, i) => (
+                          <img key={i} src={img.source?.value} alt="User upload" className="max-w-full rounded-md mb-2 object-cover" />
+                        ))}
                         <MarkdownRenderer
                           text={mainContent}
                         />
@@ -878,10 +1018,135 @@ export function ChatManager({
 
           <form
             onSubmit={handleFormSubmit}
-            className={cn("p-4 flex flex-col gap-2 shrink-0", typeof inputSectionStyle.containerStyle === 'string' ? inputSectionStyle.containerStyle : "", typeof inputSectionStyle.backgroundStyle === 'string' ? inputSectionStyle.backgroundStyle : "", (!promptChips?.promptChipList || promptChips.promptChipList.length === 0 || (!promptChips.alwaysShow && messages.length > 0)) ? "border-t border-inherit" : "")}
+            className={cn("p-4 flex flex-col gap-2 shrink-0 relative", typeof inputSectionStyle.containerStyle === 'string' ? inputSectionStyle.containerStyle : "", typeof inputSectionStyle.backgroundStyle === 'string' ? inputSectionStyle.backgroundStyle : "", (!promptChips?.promptChipList || promptChips.promptChipList.length === 0 || (!promptChips.alwaysShow && messages.length > 0)) ? "border-t border-inherit" : "")}
             style={{ ...(typeof inputSectionStyle.containerStyle === 'object' ? inputSectionStyle.containerStyle : {}), ...(typeof inputSectionStyle.backgroundStyle === 'object' ? inputSectionStyle.backgroundStyle : {}) }}
           >
-            <div className="flex gap-2 w-full">
+            {attachedFiles.length > 0 && (
+              <div 
+                className={cn("flex gap-2 w-full overflow-x-auto pb-2 shrink-0", typeof inputSectionStyle.attachmentMenuStyles?.previewContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.previewContainerStyles : "")}
+                style={typeof inputSectionStyle.attachmentMenuStyles?.previewContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.previewContainerStyles : undefined}
+              >
+                {attachedFiles.map((file, idx) => (
+                  <div key={idx} className="relative group shrink-0">
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      size="icon" 
+                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full z-10 hidden group-hover:flex"
+                      onClick={() => removeAttachedFile(idx)}
+                    >
+                      <X size={12} />
+                    </Button>
+                    <div 
+                      className={cn("h-16 w-16 border rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex flex-col items-center justify-center relative", typeof inputSectionStyle.attachmentMenuStyles?.previewItemContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.previewItemContainerStyles : "")}
+                      style={typeof inputSectionStyle.attachmentMenuStyles?.previewItemContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.previewItemContainerStyles : undefined}
+                    >
+                      {file.type.startsWith('image/') ? (
+                        <img src={file.base64} className="h-full w-full object-cover" alt="Preview" />
+                      ) : file.type.startsWith('video/') ? (
+                        <Video size={24} className="text-zinc-500" />
+                      ) : file.type.startsWith('audio/') ? (
+                        <Mic size={24} className="text-zinc-500" />
+                      ) : (
+                        <FileText size={24} className="text-zinc-500" />
+                      )}
+                      <div className="absolute bottom-0 inset-x-0 bg-black/50 text-[9px] text-white truncate px-1 text-center backdrop-blur-sm pb-0.5">
+                        {file.file.name}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2 w-full items-end relative">
+              {inputTypeList && inputTypeList.length > 0 && (
+                <div className="relative shrink-0 flex items-center justify-center h-full mb-1" ref={attachMenuRef}>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept={selectedMimeTypeFilter}
+                    onChange={handleFileSelect} 
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className={cn("rounded-full w-10 h-10 border-dashed", typeof inputSectionStyle.attachmentMenuStyles?.plusButtonContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.plusButtonContainerStyles : "")}
+                    style={typeof inputSectionStyle.attachmentMenuStyles?.plusButtonContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.plusButtonContainerStyles : undefined}
+                    onClick={() => setIsAttachMenuOpen(!isAttachMenuOpen)}
+                  >
+                    <span
+                      className={cn("flex items-center justify-center", typeof inputSectionStyle.attachmentMenuStyles?.plusButtonIconStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.plusButtonIconStyles : "")}
+                      style={typeof inputSectionStyle.attachmentMenuStyles?.plusButtonIconStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.plusButtonIconStyles : undefined}
+                    >
+                      {inputSectionStyle.attachmentMenuStyles?.plusButtonIcon || (
+                        <Plus size={18} className={cn("transition-transform duration-200 text-zinc-500", isAttachMenuOpen ? "rotate-45" : "")} />
+                      )}
+                    </span>
+                  </Button>
+                  
+                  {isAttachMenuOpen && (
+                    <div 
+                      className={cn("absolute bottom-[calc(100%+0.5rem)] left-0 bg-background/80 backdrop-blur-md border border-border/50 shadow-lg rounded-xl p-1 z-50 flex flex-col min-w-[120px] animate-in fade-in zoom-in duration-200 origin-bottom-left", typeof inputSectionStyle.attachmentMenuStyles?.menuContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuContainerStyles : "")}
+                      style={typeof inputSectionStyle.attachmentMenuStyles?.menuContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuContainerStyles : undefined}
+                    >
+                      {inputTypeList.includes('image') && (
+                        <button 
+                          type="button" 
+                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-[13px] hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
+                          style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
+                          onClick={() => triggerFileInput('image/*')}
+                        >
+                          <span className={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : ""} style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : undefined}>
+                            <ImageIcon size={14} className="text-zinc-500" />
+                          </span>
+                          Image
+                        </button>
+                      )}
+                      {inputTypeList.includes('document') && (
+                        <button 
+                          type="button" 
+                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-[13px] hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
+                          style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
+                          onClick={() => triggerFileInput('.pdf,.doc,.docx,.txt,application/pdf,text/plain')}
+                        >
+                          <span className={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : ""} style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : undefined}>
+                            <FileText size={14} className="text-zinc-500" />
+                          </span>
+                          Document
+                        </button>
+                      )}
+                      {inputTypeList.includes('audio') && (
+                        <button 
+                          type="button" 
+                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-[13px] hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
+                          style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
+                          onClick={() => triggerFileInput('audio/*')}
+                        >
+                          <span className={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : ""} style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : undefined}>
+                            <Mic size={14} className="text-zinc-500" />
+                          </span>
+                          Audio
+                        </button>
+                      )}
+                      {inputTypeList.includes('video') && (
+                        <button 
+                          type="button" 
+                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-[13px] hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
+                          style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
+                          onClick={() => triggerFileInput('video/*')}
+                        >
+                          <span className={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : ""} style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : undefined}>
+                            <Video size={14} className="text-zinc-500" />
+                          </span>
+                          Video
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               <Textarea
                 value={input}
                 onChange={handleInputChange}
@@ -906,8 +1171,8 @@ export function ChatManager({
                   size="icon"
                   onClick={() => context?.stop && context.stop()}
                   variant={isAgUI ? 'secondary' : 'default'}
-                  className={typeof inputSectionStyle.buttonStyle === 'string' ? inputSectionStyle.buttonStyle : ""}
-                  style={typeof inputSectionStyle.buttonStyle === 'object' ? inputSectionStyle.buttonStyle : undefined}
+                  className={typeof inputSectionStyle.sendButtonStyles?.containerStyle === 'string' ? inputSectionStyle.sendButtonStyles.containerStyle : ""}
+                  style={typeof inputSectionStyle.sendButtonStyles?.containerStyle === 'object' ? inputSectionStyle.sendButtonStyles.containerStyle : undefined}
                   suppressHydrationWarning={true}
                   title={labels.stopButton || "Stop Generating"}
                 >
@@ -917,12 +1182,25 @@ export function ChatManager({
                 <Button
                   type="submit"
                   variant={isAgUI ? 'secondary' : 'default'}
-                  disabled={!input.trim()}
-                  className={typeof inputSectionStyle.buttonStyle === 'string' ? inputSectionStyle.buttonStyle : ""}
-                  style={typeof inputSectionStyle.buttonStyle === 'object' ? inputSectionStyle.buttonStyle : undefined}
+                  disabled={!input.trim() && attachedFiles.length === 0}
+                  className={typeof inputSectionStyle.sendButtonStyles?.containerStyle === 'string' ? inputSectionStyle.sendButtonStyles.containerStyle : ""}
+                  style={typeof inputSectionStyle.sendButtonStyles?.containerStyle === 'object' ? inputSectionStyle.sendButtonStyles.containerStyle : undefined}
                   suppressHydrationWarning={true}
                 >
-                  {labels.sendButton || "Send"}
+                  <span
+                    className={cn("flex items-center justify-center gap-2", typeof inputSectionStyle.sendButtonStyles?.iconStyles === 'string' ? inputSectionStyle.sendButtonStyles.iconStyles : "")}
+                    style={typeof inputSectionStyle.sendButtonStyles?.iconStyles === 'object' ? inputSectionStyle.sendButtonStyles.iconStyles : undefined}
+                  >
+                    {inputSectionStyle.sendButtonStyles?.icon !== undefined ? inputSectionStyle.sendButtonStyles.icon : <Send size={16} />}
+                  </span>
+                  {labels.sendButton && (
+                    <span
+                      className={typeof inputSectionStyle.sendButtonStyles?.labelStyles === 'string' ? inputSectionStyle.sendButtonStyles.labelStyles : ""}
+                      style={typeof inputSectionStyle.sendButtonStyles?.labelStyles === 'object' ? inputSectionStyle.sendButtonStyles.labelStyles : undefined}
+                    >
+                      {labels.sendButton}
+                    </span>
+                  )}
                 </Button>
               )}
             </div>

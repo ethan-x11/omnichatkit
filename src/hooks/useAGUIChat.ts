@@ -81,9 +81,8 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
 
     if (!agentRef.current) return '';
     const newMessage = {
-      id: Date.now().toString(),
-      role: message.role as string,
-      content: message.content as string,
+      ...message,
+      id: message.id || Date.now().toString(),
     };
     
     // Optimistic UI
@@ -96,15 +95,9 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
     setEvents([]);
     
     try {
-      let aguiMessages = messagesRef.current.map(m => ({
-        role: m.role as any,
-        content: m.content as string,
-        id: m.id
+      const aguiMessages = messagesRef.current.map(m => ({
+        ...m
       })) as AGUIMessage[];
-
-      if (chatRequestOptions?.body?.sendHistory === false) {
-        aguiMessages = aguiMessages.length > 0 ? [aguiMessages[aguiMessages.length - 1]] : [];
-      }
 
       setStatus('streaming');
       agentRef.current.setMessages(aguiMessages);
