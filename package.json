@@ -45,8 +45,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "tsdown",
+    "dev": "tsdown --watch",
     "lint": "tsc --noEmit",
     "prepublishOnly": "npm pkg delete devDependencies",
     "postpublish": "git checkout -- package.json"
@@ -97,7 +97,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.41",
     "tailwindcss": "^3.4.10",
-    "tsup": "^8.5.1",
+    "tsdown": "^0.22.14",
     "typescript": "^7.0.2"
   }
 }
