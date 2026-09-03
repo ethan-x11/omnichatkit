@@ -283,8 +283,8 @@ export function A2UICanvas({ emptyState, className, style }: A2UICanvasProps = {
     }
   }, [messages, a2uiToolName, agentId]);
 
-  // ── Bus subscription: maintain surface state ─────────────────────────────
-  const [surface, setSurface] = useState<SurfaceState | null>(null);
+  // ── Bus subscription: maintain surface state ──────────────────────────────
+  const [surfaces, setSurfaces] = useState<SurfaceState[]>([]);
   const seenOpsRef = useRef(0);
   const createdSurfaceIdsRef = useRef<Set<string>>(new Set());
 
@@ -311,27 +311,42 @@ export function A2UICanvas({ emptyState, className, style }: A2UICanvasProps = {
           }
           createdSurfaceIdsRef.current.add(sid);
 
-          setSurface({
-            surfaceId: sid,
-            catalogId: cs.catalogId,
-            sendDataModel: cs.sendDataModel,
-            components: {},
-            rootId: null,
-            dataModel: {},
-          });
+          setSurfaces((prev) => [
+            ...prev,
+            {
+              surfaceId: sid,
+              catalogId: cs.catalogId,
+              sendDataModel: cs.sendDataModel,
+              components: {},
+              rootId: null,
+              dataModel: {},
+            }
+          ]);
         }
 
         if ('deleteSurface' in op) {
           const ds = op.deleteSurface as { surfaceId?: string };
-          setSurface((prev) =>
-            prev?.surfaceId === ds.surfaceId ? null : prev,
+          setSurfaces((prev) =>
+            prev.filter((s) => s.surfaceId !== ds.surfaceId)
           );
         }
 
         if ('updateComponents' in op || 'updateDataModel' in op) {
-          setSurface((prev) => {
-            if (!prev) return prev;
-            return applyOp(prev, op);
+          setSurfaces((prev) => {
+            if (prev.length === 0) return prev;
+            
+            const targetId = ('updateComponents' in op) 
+              ? (op.updateComponents as any).surfaceId 
+              : (op.updateDataModel as any).surfaceId;
+            
+            if (targetId) {
+              return prev.map(s => s.surfaceId === targetId ? applyOp(s, op) : s);
+            } else {
+              // Apply to the most recent surface if no ID provided
+              const next = [...prev];
+              next[next.length - 1] = applyOp(next[next.length - 1], op);
+              return next;
+            }
           });
         }
       }
@@ -365,8 +380,8 @@ export function A2UICanvas({ emptyState, className, style }: A2UICanvasProps = {
     [],
   );
 
-  // ── Render ────────────────────────────────────────────────────────────────
-  if (!surface || !surface.rootId) {
+  // ┌── Render ────────────────────────────────────────────────────────────────
+  if (!surfaces.length || !surfaces.some(s => s.rootId)) {
     if (emptyState) {
       return (
         <div className={`h-full flex flex-col items-center justify-center p-8 ${className || ''}`} style={style}>
@@ -385,17 +400,26 @@ export function A2UICanvas({ emptyState, className, style }: A2UICanvasProps = {
       )}
       style={style}
       data-layout={layout ?? 'inline'}
-      data-surface-id={surface.surfaceId}
       data-a2ui-version={a2uiVersion}
       options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
       defer
     >
-      <RenderNode
-        nodeId={surface.rootId}
-        surface={surface}
-        catalog={catalog}
-        dispatch={dispatch}
-      />
+      <div className="flex flex-col gap-6 p-4">
+        {surfaces.map((surface, index) => {
+          if (!surface.rootId) return null;
+          return (
+            <div key={surface.surfaceId} className="a2ui-surface-container relative" data-surface-id={surface.surfaceId}>
+              {index > 0 && <div className="h-px bg-border my-6" />}
+              <RenderNode
+                nodeId={surface.rootId}
+                surface={surface}
+                catalog={catalog}
+                dispatch={dispatch}
+              />
+            </div>
+          );
+        })}
+      </div>
     </OverlayScrollbarsComponent>
   );
 }
