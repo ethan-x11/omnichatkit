@@ -3,6 +3,13 @@ export type SessionTitleMessage = {
   content?: unknown;
 };
 
+/**
+ * Generates a prompt for an LLM to create a concise session title
+ * based on the provided conversation history.
+ *
+ * @param messages - The chat history to base the title on.
+ * @returns A string containing the prompt instructions and conversation context.
+ */
 export const createSessionTitlePrompt = (messages: SessionTitleMessage[]) => {
   const transcript = messages
     .filter((message) => message.role === 'user' || message.role === 'assistant')

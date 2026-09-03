@@ -8,6 +8,13 @@ import type { SessionTitleMessage } from '../lib/session-title';
 
 export const AGUIChatContext = createContext<ChatContextHelpers | null>(null);
 
+/**
+ * Provides the chat state context using the custom `useAGUIChat` hook.
+ * This is used for the Agentic UI API mode, handling structured JSON actions.
+ *
+ * @param props - Provider configuration.
+ * @returns A context provider wrapping the chat UI components.
+ */
 export function AGUIChatProvider({ children, theme = 'standard', apiEndpoint = '/api/agent', agentId, sessionId, sessionStorageMode = 'disabled', sessionRoute = '/session' }: AIChatProviderProps) {
   const setTheme = useAIChatStore((state) => state.setTheme);
   const setSessionStorageMode = useAIChatStore((state) => state.setSessionStorageMode);
@@ -119,6 +126,10 @@ export function AGUIChatProvider({ children, theme = 'standard', apiEndpoint = '
   );
 }
 
+/**
+ * Accesses the chat context provided by `AGUIChatProvider`.
+ * @returns The custom AGUI chat helpers and store configurations.
+ */
 export function useAGUIChatContext() {
   const context = useContext(AGUIChatContext);
   if (!context) {

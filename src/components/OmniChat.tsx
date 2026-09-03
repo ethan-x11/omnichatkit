@@ -5,6 +5,15 @@ import { AGUIChatProvider } from './AGUIChatProvider';
 import { AIChatProvider } from './AIChatProvider';
 import { useAIChatStore } from '../store/useAIChatStore';
 
+/**
+ * The main wrapper component for OmniChatKit.
+ * It initializes the global state, sets up the chat provider based on the `api_mode`,
+ * and manages session configurations. All other OmniChatKit components (like `ChatManager`
+ * and `SessionManager`) should be rendered inside this provider.
+ *
+ * @param props - Configuration properties for the OmniChat instance.
+ * @returns A wrapped React element providing chat context to its children.
+ */
 export function OmniChat({
   api_mode,
   theme,

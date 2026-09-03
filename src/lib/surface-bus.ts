@@ -19,6 +19,10 @@ function getSurfaceIdFromOp(op: A2UIOp): string | undefined {
   return cs ?? uc ?? ud ?? ds;
 }
 
+/**
+ * A central event bus for managing generative UI operations.
+ * Allows components to push and subscribe to Agentic UI state changes.
+ */
 export const surfaceBus = {
   push(channel: string, ops: A2UIOp[]) {
     const buf = buffers.get(channel) ?? [];

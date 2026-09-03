@@ -3,8 +3,16 @@ import { HttpAgent } from '@ag-ui/client';
 import { Message as AGUIMessage, Role, BaseEvent } from '@ag-ui/core';
 import { UseChatHelpers } from '../components/AIChatProvider';
 
-// useAGUIChat adapter implements Vercel UseChatHelpers interface for compatibility
-// but internally uses @ag-ui/client for state and streaming
+/**
+ * Adapts the `@ag-ui/client` `HttpAgent` to match the Vercel AI SDK `useChat` API surface.
+ * Handles state, streaming, tool executions, and action synchronization for the Agentic UI.
+ *
+ * @param config - Configuration options.
+ * @param config.api - The base URL of the Agentic UI backend endpoint.
+ * @param config.body - Additional body parameters to send with requests, such as `sessionId`.
+ * @param config.agentId - The specific agent identifier, appended to the API route.
+ * @returns An object matching the Vercel AI SDK `UseChatHelpers` interface, plus custom event data.
+ */
 export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record<string, any>; agentId?: string }): UseChatHelpers {
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');

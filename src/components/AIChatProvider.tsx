@@ -14,6 +14,13 @@ export type ChatContextHelpers = UseChatHelpers & {
 
 export const AIChatContext = createContext<ChatContextHelpers | null>(null);
 
+/**
+ * Provides the chat state context using the Vercel AI SDK (`useChat` hook) internally.
+ * This is the classic mode provider where the AI backend returns standard AI streams.
+ *
+ * @param props - Provider configuration.
+ * @returns A context provider wrapping the chat UI components.
+ */
 export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/api/chat', agentId, sessionId, sessionStorageMode = 'disabled', sessionRoute = '/session', chatApiSchema }: AIChatProviderProps) {
   const setTheme = useAIChatStore((state) => state.setTheme);
   const setSessionStorageMode = useAIChatStore((state) => state.setSessionStorageMode);
@@ -168,6 +175,10 @@ export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/a
   );
 }
 
+/**
+ * Accesses the chat context provided by `AIChatProvider`.
+ * @returns The chat helpers provided by Vercel AI SDK and custom store configurations.
+ */
 export function useAIChatContext() {
   const context = useContext(AIChatContext);
   if (!context) {

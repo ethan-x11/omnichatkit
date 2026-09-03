@@ -64,6 +64,14 @@ const formatRelativeTime = (value: Date | string, now: number) => {
   return `${elapsedYears} year${elapsedYears === 1 ? '' : 's'} ago`;
 };
 
+/**
+ * A sidebar or drawer component that manages chat sessions (history).
+ * Allows users to switch between past conversations, rename them, pin them,
+ * or delete them. Connects automatically to the `useAIChatStore`.
+ *
+ * @param props - Configuration and styling options for the session list.
+ * @returns A rendered session manager UI component.
+ */
 export function SessionManager({ 
   label = "Sessions", 
   recentLabel = "Recent Conversations",

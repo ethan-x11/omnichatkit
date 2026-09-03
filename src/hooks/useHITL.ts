@@ -2,6 +2,12 @@ import { useCallback } from 'react';
 import { useAIChatStore } from '../store/useAIChatStore';
 import { HITLState } from '../types';
 
+/**
+ * Hook to manage Human-in-the-Loop (HITL) interactions.
+ * It provides the state of any pending actions and functions to approve or reject them.
+ *
+ * @returns The current HITL state containing any pending action and handler functions.
+ */
 export function useHITL(): HITLState {
   const pendingHITLAction = useAIChatStore((state) => state.pendingHITLAction);
   const setPendingHITLAction = useAIChatStore((state) => state.setPendingHITLAction);

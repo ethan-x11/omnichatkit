@@ -76,6 +76,14 @@ function A2UIToolPill({
   );
 }
 
+/**
+ * The core Chat UI component that manages message rendering, input state,
+ * and user interactions. It automatically connects to the nearest
+ * `AIChatProvider` or `AGUIChatProvider` context.
+ *
+ * @param props - Customization and configuration properties for the chat UI.
+ * @returns A rendered chat interface component.
+ */
 export function ChatManager({
   theme,
   className,

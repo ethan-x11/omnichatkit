@@ -1,12 +1,42 @@
 import { ReactNode } from 'react';
 import type { Message as AiMessage, CreateMessage } from 'ai';
 
+/**
+ * Available built-in themes for the chat interface.
+ */
 export type ChatTheme = 'standard' | 'dark' | 'light';
+
+/**
+ * Determines how chat sessions are persisted across reloads.
+ * - 'disabled': Sessions are not tracked at all.
+ * - 'memory': Sessions are saved to the browser's `sessionStorage`.
+ * - 'api': Sessions are loaded from and saved to a remote server.
+ */
 export type StorageMode = 'disabled' | 'memory' | 'api';
+
+/**
+ * Determines the layout behavior for the Agentic UI (A2UI) canvas.
+ * - 'inline': Rendered within the message list.
+ * - 'split': Rendered in a separate detached canvas next to the chat.
+ */
 export type A2UILayout = 'inline' | 'split';
+
+/**
+ * Position of the chat component relative to its container.
+ */
 export type ComponentPosition = 'left' | 'right' | 'top' | 'bottom';
+
+/**
+ * Visual display mode for the chat manager.
+ * - 'embedded': Rendered inline with the normal document flow.
+ * - 'floating': Rendered as a floating widget on top of the page.
+ */
 export type DisplayMode = 'embedded' | 'floating';
 
+/**
+ * A mapping of component names to React functional components.
+ * Used for rendering dynamic UI from the Agentic UI (A2UI) system.
+ */
 export interface A2UICatalog {
   [componentName: string]: React.FC<any>;
 }
@@ -41,16 +71,28 @@ export interface ChatLabels {
 export interface WelcomeScreenProps {}
 export type SlotValue<T> = T | ReactNode;
 
+/**
+ * Internal representation of a chat message. Extends the Vercel AI SDK Message.
+ */
 export interface Message extends Omit<AiMessage, 'role' | 'content'> {
+  /** The author of the message. Typically 'user' or 'assistant', but supports custom roles. */
   role: 'user' | 'assistant' | 'system' | 'tool' | 'developer' | 'activity' | 'reasoning' | string;
+  /** The message text or array of rich input content (like images/documents). */
   content?: string | InputContent[];
+  /** Optional display name of the message sender. */
   name?: string;
+  /** Encrypted or masked content for sensitive information. */
   encryptedContent?: string;
+  /** Arbitrary metadata attached to the message. */
   metadata?: Record<string, any>;
+  /** Defines the Agentic UI component to render for this message. */
   componentPayload?: {
+    /** The name of the component, matching an entry in the A2UICatalog. */
     name: string;
+    /** The props to pass to the component. */
     props: Record<string, any>;
   };
+  /** Indicates if a human-in-the-loop review is required before continuing. */
   hitlRequired?: boolean;
 }
 
@@ -174,13 +216,22 @@ export interface ApiSchema {
   apiResponseSchema?: ApiResponseSchema;
 }
 
+/**
+ * Props for configuring the AIChatProvider (classic mode).
+ */
 export interface AIChatProviderProps {
   children: ReactNode;
+  /** Visual theme for the chat. */
   theme?: ChatTheme;
-  apiEndpoint?: string; // Route for Vercel AI SDK useChat
+  /** The endpoint route for the Vercel AI SDK `useChat`. */
+  apiEndpoint?: string; 
+  /** Optional identifier for the current agent context. */
   agentId?: string;
+  /** Unique ID for the current chat session. */
   sessionId?: string;
+  /** How session state should be managed. */
   sessionStorageMode?: StorageMode;
+  /** The endpoint to use when session storage is set to 'api'. */
   sessionRoute?: string;
   /** Schema that maps OmniChatKit's internal message format to the backend API. Only used in `classic` mode. */
   chatApiSchema?: ApiSchema;
@@ -317,14 +368,25 @@ export interface ChatManagerComponentStyles {
   backgroundStyle?: React.CSSProperties | string;
 }
 
+/**
+ * Core configuration properties for the ChatManager component.
+ */
 export type ChatManagerBaseProps = { 
+  /** Theme to apply to the ChatManager. */
   theme?: ChatTheme;
+  /** Additional CSS class names. */
   className?: string;
+  /** Inline styles for the root container. */
   style?: React.CSSProperties;
+  /** Advanced custom styling for internal components. */
   chatManagerComponentStyles?: ChatManagerComponentStyles;
+  /** Allowed types of attachments the user can upload. */
   inputTypeList?: Array<'image' | 'audio' | 'video' | 'document'>;
+  /** Position of the component. */
   position?: ComponentPosition;
+  /** Where to place the collapse toggle button. */
   collapseToggleButtonPosition?: ToggleButtonPosition;
+  /** Customization options for the toggle button. */
   toggleButtonProps?: {
     toggleButtonStyle?: React.CSSProperties | string;
     toggleButtonIconProps?: {
@@ -336,23 +398,42 @@ export type ChatManagerBaseProps = {
       toggleButtonLabelStyle?: React.CSSProperties | string;
     };
   };
+  /** Whether the chat is open by default on mount. */
   defaultOpen?: boolean;
+  /** If true, the chat automatically scrolls to the bottom on new messages. */
   autoScroll?: boolean;
+  /** Props forwarded to the native input element. */
   inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
+  /** Optional welcome screen rendered when the chat is empty. */
   welcomeScreen?: SlotValue<React.FC<WelcomeScreenProps>> | boolean;
+  /** Localization and override labels for UI text. */
   labels?: Partial<ChatLabels>;
+  /** Suggested prompts to display to the user. */
   promptChips?: PromptChips;
+  /** The active agent's ID. */
   agentId?: string;
+  /** The active session ID. */
   sessionId?: string;
-  a2uiPosition?: ComponentPosition; // Used when layout is 'split'
-  collapsibleA2UI?: boolean; // Used when layout is 'split'
+  /** Position for the detached A2UI canvas (used when layout is 'split'). */
+  a2uiPosition?: ComponentPosition; 
+  /** Whether the split A2UI canvas is collapsible. */
+  collapsibleA2UI?: boolean; 
+  /** Maximum character limit for the user input. */
   maxInputCharacter?: number;
+  /** Whether the chat backend streams responses. */
   streaming?: boolean;
+  /** Whether to display tool calls in the message list. */
   showToolCalls?: boolean;
+  /** Whether to display model reasoning steps in the message list. */
   showReasoning?: boolean;
+  /** Whether to send the full message history on each request. */
   sendHistory?: boolean;
 };
 
+/**
+ * Complete properties for the ChatManager component, which combines base properties
+ * with display mode specific options.
+ */
 export type ChatManagerProps = ChatManagerBaseProps & (
   | { display: 'floating'; displayOptions?: never }
   | { display?: 'embedded'; displayOptions?: { collapsible?: boolean; isResizable?: boolean } }
@@ -402,16 +483,31 @@ export interface SessionManagerComponentStyles {
   newConversationButtonStyles?: NewConversationButtonStyles;
 }
 
+/**
+ * Properties for configuring the SessionManager component.
+ */
 export interface SessionManagerProps {
+  /** Interval in milliseconds to sync sessions from the API. */
   syncInterval?: number;
+  /** Main title for the session manager. */
   label?: string;
+  /** Label for the 'Recent' section. */
   recentLabel?: string;
   className?: string;
   style?: React.CSSProperties;
-  position?: ComponentPosition; // The position of the drawer or inline sidebar
-  collapsible?: boolean | 'inline' | 'sheet'; // If true or 'sheet', acts as a slide-out drawer. If 'inline', acts as a collapsible sidebar. If false, acts as a static container.
+  /** The position of the drawer or inline sidebar. */
+  position?: ComponentPosition; 
+  /** 
+   * If true or 'sheet', acts as a slide-out drawer. 
+   * If 'inline', acts as a collapsible sidebar. 
+   * If false, acts as a static container.
+   */
+  collapsible?: boolean | 'inline' | 'sheet'; 
+  /** Callback fired when a session is selected. */
   onSessionSelect?: (sessionId: string) => void;
+  /** Callback fired when creating a new session. */
   onNewSession?: () => void;
+  /** Advanced custom styling for internal components. */
   sessionManagerComponentStyles?: SessionManagerComponentStyles;
 }
 
@@ -445,14 +541,25 @@ export type OmniChatProps = OmniChatBaseProps & (
   | { api_mode: 'ag-ui'; chatApiSchema?: never }
 );
 
+/**
+ * Properties for configuring the Agentic UI (A2UI) system.
+ */
 export interface A2UIProps {
+  /** The current agent's identifier. */
   agentId: string;
+  /** The name of the tool call used by the LLM to trigger a component render. */
   a2uiToolName: string;
+  /** A2UI version compatibility flag. */
   a2uiVersion?: 'V0.8' | 'V0.9' | 'V0.9.1' | 'V1.0';
+  /** Whether to inject the basic fallback catalog components. */
   includeBasicCatalog?: boolean;
+  /** Whether to inject pre-built custom components. */
   includePreBuiltCustomComponents?: boolean;
+  /** Internal layout representation. */
   layout?: A2UILayout;
+  /** The mapping of component names to React implementations. */
   catalog?: A2UICatalog;
+  /** Controls where the A2UI should render (inline in chat or detached). */
   a2uiRenderingOption?: 'chat' | 'detached';
 }
 
@@ -462,16 +569,30 @@ export interface A2UICanvasProps {
   style?: React.CSSProperties;
 }
 
+/**
+ * State representing a Human-in-the-loop (HITL) interruption.
+ */
 export interface HITLState {
+  /** True if the chat is currently blocked waiting for human approval. */
   isActive: boolean;
+  /** The pending action/payload that needs review. */
   pendingAction: any | null;
+  /** Callback to approve the action. An optional modified payload can be provided. */
   approve: (modifiedPayload?: any) => void;
+  /** Callback to reject the action with an optional reason. */
   reject: (reason?: string) => void;
 }
 
+/**
+ * State representing active tool/streaming executions that can be interrupted.
+ */
 export interface InterruptState {
+  /** True if the AI is currently streaming a text response. */
   isStreaming: boolean;
+  /** True if the AI is currently executing a backend tool call. */
   isExecutingTool: boolean;
+  /** Cancels the ongoing text stream. */
   haltStream: () => void;
+  /** Cancels the ongoing tool execution. */
   cancelTool: () => void;
 }

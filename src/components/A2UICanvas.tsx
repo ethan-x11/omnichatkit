@@ -213,6 +213,14 @@ function RenderNode({
 // Main component
 // ---------------------------------------------------------------------------
 
+/**
+ * Renders the Agentic UI (A2UI) surface. It listens to the `surfaceBus` for
+ * UI rendering operations and recursively mounts dynamic components based on
+ * the LLM's instructions.
+ *
+ * @param props - Configuration properties for the canvas.
+ * @returns The rendered UI canvas.
+ */
 export function A2UICanvas({ emptyState, className, style }: A2UICanvasProps = {}) {
   const a2uiProps = useAIChatStore((state) => state.a2uiProps);
   const {

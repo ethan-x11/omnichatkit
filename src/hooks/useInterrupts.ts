@@ -2,6 +2,12 @@ import { useCallback } from 'react';
 import { useAIChatContext } from '../components/AIChatProvider';
 import { InterruptState } from '../types';
 
+/**
+ * Hook to manage interrupt signals for the active chat stream.
+ * Allows the user to halt a generation in progress.
+ *
+ * @returns The interrupt state, including whether the stream is active and functions to cancel it.
+ */
 export function useInterrupts(): InterruptState {
   const { stop, status } = useAIChatContext();
   const isLoading = status === 'submitted' || status === 'streaming';
