@@ -50,11 +50,11 @@ export default function ChatPage() {
     <OmniChat 
       api_mode="ag-ui" // "ag-ui" or "classic"
       apiEndpoint="/api/agent"
-      a2uiRenderingOption="detached" // "detached" (split pane) or "chat" (inline)
       useA2UI={true}
       a2uiProps={{
         a2uiToolName: "render-dynamic-ui",
-        agentId: "orchestratr_agent"
+        agentId: "orchestratr_agent",
+        a2uiRenderingOption: "detached" // "detached" (split pane) or "chat" (inline)
       }}
       theme="dark"
     >
