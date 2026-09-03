@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
+import 'overlayscrollbars/overlayscrollbars.css';
 import { AIChatContext } from './AIChatProvider';
 import { AGUIChatContext } from './AGUIChatProvider';
 import { catalog as preBuiltCustomCatalog } from './a2ui';
@@ -376,15 +378,17 @@ export function A2UICanvas({ emptyState, className, style }: A2UICanvasProps = {
   }
 
   return (
-    <div
+    <OverlayScrollbarsComponent
       className={cn(
-        "a2ui-canvas w-full h-full rounded-md border bg-background text-foreground shadow-sm overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent dark:[&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600",
+        "a2ui-canvas w-full h-full rounded-md border bg-background text-foreground shadow-sm overflow-x-hidden",
         className
       )}
       style={style}
       data-layout={layout ?? 'inline'}
       data-surface-id={surface.surfaceId}
       data-a2ui-version={a2uiVersion}
+      options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
+      defer
     >
       <RenderNode
         nodeId={surface.rootId}
@@ -392,6 +396,6 @@ export function A2UICanvas({ emptyState, className, style }: A2UICanvasProps = {
         catalog={catalog}
         dispatch={dispatch}
       />
-    </div>
+    </OverlayScrollbarsComponent>
   );
 }

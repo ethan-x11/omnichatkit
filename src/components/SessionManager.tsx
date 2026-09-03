@@ -1,5 +1,7 @@
 "use client"
 import React, { useState } from 'react';
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
+import 'overlayscrollbars/overlayscrollbars.css';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { Button } from './ui/button';
 import { SessionManagerProps } from '../types';
@@ -292,11 +294,15 @@ export function SessionManager({
         <div className="p-4 border-b">
           <Skeleton className="h-10 w-full rounded-md" />
         </div>
-        <div className="flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 space-y-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent dark:[&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600">
+        <OverlayScrollbarsComponent 
+          className="flex-1 p-4 space-y-4"
+          options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
+          defer
+        >
           <Skeleton className="h-16 w-full rounded-xl" />
           <Skeleton className="h-16 w-full rounded-xl" />
           <Skeleton className="h-16 w-full rounded-xl" />
-        </div>
+        </OverlayScrollbarsComponent>
       </div>
     );
   }
@@ -360,7 +366,11 @@ export function SessionManager({
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto [scrollbar-gutter:stable] p-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent dark:[&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600">
+      <OverlayScrollbarsComponent 
+        className="flex-1 p-2"
+        options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
+        defer
+      >
         <div className="px-2 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           {recentLabel}
         </div>
@@ -555,7 +565,7 @@ export function SessionManager({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+      </OverlayScrollbarsComponent>
     </div>
   );
 

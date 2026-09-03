@@ -5,7 +5,7 @@ import { AGUIChatContext } from './AGUIChatProvider';
 import { useAIChatStore } from '../store/useAIChatStore';
 import { ChatManagerProps } from '../types';
 import { A2UICanvas } from './A2UICanvas';
-import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
+import { OverlayScrollbarsComponent, useOverlayScrollbars } from 'overlayscrollbars-react';
 import 'overlayscrollbars/overlayscrollbars.css';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -289,6 +289,9 @@ export function ChatManager({
   const isEmbeddedCollapsible = isEmbedded && collapsible;
 
   const [isHydrated, setIsHydrated] = React.useState(false);
+  const [initTextareaScrollbars] = useOverlayScrollbars({
+    options: { scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }
+  });
   React.useEffect(() => {
     setIsHydrated(true);
   }, []);
@@ -1246,7 +1249,7 @@ export function ChatManager({
                   }
                 }}
                 placeholder={labels.placeholder || "Type a message..."}
-                className={cn("flex-1 bg-foreground/5 border-transparent shadow-sm focus-visible:bg-transparent [scrollbar-gutter:stable] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent dark:[&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600", typeof inputSectionStyle.inputStyle === 'string' ? inputSectionStyle.inputStyle : "")}
+                className={cn("flex-1 bg-foreground/5 border-transparent shadow-sm focus-visible:bg-transparent max-h-[120px]", typeof inputSectionStyle.inputStyle === 'string' ? inputSectionStyle.inputStyle : "")}
                 style={typeof inputSectionStyle.inputStyle === 'object' ? inputSectionStyle.inputStyle : undefined}
                 suppressHydrationWarning={true}
                 maxLength={maxInputCharacter}
