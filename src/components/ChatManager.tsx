@@ -136,6 +136,17 @@ export function ChatManager({
   const sessionsEnabled = sessionStorageMode !== 'disabled';
 
   const activeSessionIdRef = React.useRef(activeSessionId);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const [initializeTextarea] = useOverlayScrollbars({
+    options: { scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } },
+    defer: true
+  });
+
+  React.useEffect(() => {
+    if (textareaRef.current) {
+      initializeTextarea(textareaRef.current);
+    }
+  }, [initializeTextarea]);
 
   React.useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
@@ -1238,8 +1249,10 @@ export function ChatManager({
                 </div>
               )}
               <Textarea
+                ref={textareaRef}
                 value={input}
                 onChange={handleInputChange}
+                maxRows={5}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -1249,7 +1262,7 @@ export function ChatManager({
                   }
                 }}
                 placeholder={labels.placeholder || "Type a message..."}
-                className={cn("flex-1 bg-foreground/5 border-transparent shadow-sm focus-visible:bg-transparent max-h-[120px]", typeof inputSectionStyle.inputStyle === 'string' ? inputSectionStyle.inputStyle : "")}
+                className={cn("flex-1 bg-foreground/5 border-transparent shadow-sm focus-visible:bg-transparent", typeof inputSectionStyle.inputStyle === 'string' ? inputSectionStyle.inputStyle : "")}
                 style={typeof inputSectionStyle.inputStyle === 'object' ? inputSectionStyle.inputStyle : undefined}
                 suppressHydrationWarning={true}
                 maxLength={maxInputCharacter}
