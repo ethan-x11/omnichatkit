@@ -59,7 +59,8 @@
     "dev": "tsdown --watch",
     "lint": "tsc --noEmit",
     "prepublishOnly": "npm pkg delete devDependencies",
-    "postpublish": "git checkout -- package.json"
+    "postpublish": "git checkout -- package.json",
+    "prepare": "npm run build"
   },
   "peerDependencies": {
     "react": "^19.0.0",
