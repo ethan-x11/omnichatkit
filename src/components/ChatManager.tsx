@@ -5,7 +5,8 @@ import { AGUIChatContext } from './AGUIChatProvider';
 import { useAIChatStore } from '../store/useAIChatStore';
 import { ChatManagerProps } from '../types';
 import { A2UICanvas } from './A2UICanvas';
-import { ScrollArea } from './ui/scroll-area';
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
+import 'overlayscrollbars/overlayscrollbars.css';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
@@ -294,9 +295,15 @@ export function ChatManager({
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const [userScrolledUp, setUserScrolledUp] = React.useState(false);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
+  const handleScroll = (instanceOrEvent: any) => {
+    let target;
+    if (instanceOrEvent && typeof instanceOrEvent.elements === 'function') {
+      target = instanceOrEvent.elements().viewport;
+    } else if (instanceOrEvent && instanceOrEvent.currentTarget) {
+      target = instanceOrEvent.currentTarget;
+    } else {
+      return;
+    }
     // Allow a 50px threshold to determine if we are at the bottom
     const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 50;
     if (isAtBottom && userScrolledUp) {
@@ -522,10 +529,12 @@ export function ChatManager({
         {/* Primary Chat Feed */}
         <div className={`flex flex-col flex-1 h-full min-w-0`}>
           <div className="relative flex-1 min-h-0 flex flex-col">
-            <div
-            className={cn("flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent dark:[&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
+            <OverlayScrollbarsComponent
+            className={cn("flex-1 p-4", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
             style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
-            onScroll={handleScroll}
+            events={{ scroll: handleScroll }}
+            options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
+            defer
           >
             {messages.length === 0 && welcomeScreen && (
               <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
@@ -1035,7 +1044,7 @@ export function ChatManager({
               return null;
             })()}
             <div ref={messagesEndRef} />
-          </div>
+            </OverlayScrollbarsComponent>
 
           {userScrolledUp && (
             <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10 pointer-events-none">
@@ -1320,9 +1329,13 @@ export function ChatManager({
               <SheetClose render={<Button variant="ghost" size="icon-sm" className="h-8 w-8"><A2UICollapseIcon size={16} /></Button>} />
             )}
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto p-4 relative">
-            <A2UICanvas />
-          </div>
+            <OverlayScrollbarsComponent
+              className="flex-1 p-4 relative"
+              options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
+              defer
+            >
+              <A2UICanvas />
+            </OverlayScrollbarsComponent>
         </div>
       </SheetContent>
     </Sheet>
