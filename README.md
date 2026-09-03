@@ -256,6 +256,10 @@ The `ChatManager` component comes with extensive styling and layout capabilities
 - **`maxInputCharacter`** (`number`): Optional limit for the maximum number of characters allowed in the chat input box.
 - **`autoScroll`** (`boolean`): Automatically scrolls the chat feed to the bottom when new messages arrive. Defaults to `true`. Scrolling up manually will pause auto-scroll and show a "Scroll to bottom" button.
 - **`streaming`** (`boolean`): Enable or disable streaming for responses. When set, this flag is forwarded to the backend via the request body. Omit to let the backend decide.
+- **`sendHistory`** (`boolean`): Set to `false` to send only the latest message to the API instead of the entire chat history. Defaults to `true`.
+- **`showToolCalls`** (`boolean`): Set to `true` to display tool invocations in the chat feed. Defaults to `false`.
+- **`showReasoning`** (`boolean`): Set to `true` to display AI reasoning blocks (e.g. `<think>` tags) in the chat feed. Defaults to `false` (or handled automatically in some setups).
+- **`inputTypeList`** (`Array<"image" | "document" | "audio" | "video">`): Enables the multimodal attachment menu and specifies which file types users can upload.
 - **`promptChips`** (`PromptChips`): Render actionable chips above the input box (e.g., for suggested questions or starter prompts). Includes a `promptChipList` (title, hoverText, prompt) and an `alwaysShow` boolean flag.
 - **`toggleButtonProps`** (`object`): Deep customization for the collapse/expand trigger button (replaces old `toggleButtonStyle`).
   - `toggleButtonStyle`: Overall button container styles.
@@ -345,7 +349,13 @@ import { User, Bot } from 'lucide-react';
       backgroundStyle: "bg-slate-950",
       containerStyle: "border-t-slate-800",
       inputStyle: "bg-slate-900 border-slate-700 text-white",
-      buttonStyle: "bg-blue-600 hover:bg-blue-700"
+      sendButtonStyles: {
+        containerStyle: "bg-blue-600 hover:bg-blue-700 text-white"
+      },
+      attachmentMenuStyles: {
+        plusButtonContainerStyles: "text-slate-400 hover:text-white border-slate-700",
+        menuContainerStyles: "bg-slate-900 border-slate-700"
+      }
     }
   }}
   labels={{
