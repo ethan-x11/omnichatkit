@@ -438,7 +438,46 @@ function MyCustomChatUI() {
 > [!NOTE]
 > `useChatContext` is safe to use immediately on first render. It reads context values synchronously from the React tree rather than relying on the store's `apiMode` value, which is set via `useEffect` and would not be available on the initial render.
 
-### 8. Working with AI Reasoning (e.g. DeepSeek `<think>`)
+### 8. Secure API Proxy (`omnichatkit/server`)
+
+OmniChatKit provides a built-in, secure API proxy handler designed to sit between your Next.js frontend and your LLM backend. It utilizes Hono's native middleware to provide robust authentication and request forwarding.
+
+```typescript
+// app/api/[[...slug]]/route.ts
+import { serveOmniChat } from "omnichatkit/server";
+
+const handler = serveOmniChat({
+  basePath: "/api",
+  backendUrl: process.env.BACKEND_URL || "http://localhost:8000/api/",
+  
+  // Optional: Automatically extract identity from requests
+  identifyUser: async (req) => {
+    // ... custom logic ...
+    return { id: "user_123", name: "Alice" };
+  },
+
+  // Native security middleware
+  security: {
+    // 1. Static API Key validation
+    apiKey: process.env.MY_API_KEY, 
+    
+    // 2. Bearer Token validation (Authorization: Bearer <token>)
+    // bearerToken: async (token) => await verifyOAuthToken(token),
+    
+    // 3. JWT validation
+    // jwt: { secret: process.env.JWT_SECRET, alg: 'HS256' },
+
+    // 4. Custom Hono Middleware
+    // customMiddleware: [ ... ]
+  }
+});
+
+export const { GET, POST, PATCH, PUT, DELETE } = handler;
+```
+
+This proxy ensures unauthorized requests are immediately dropped (returning `401 Unauthorized`) before they hit your expensive LLM APIs.
+
+### 9. Working with AI Reasoning (e.g. DeepSeek `<think>`)
 OmniChatKit automatically parses and extracts `<think>` tags from incoming model streams. It strips these out of the primary text response and renders them natively as a beautiful, collapsible "Reasoning" accordion inside the message block! No extra configuration is required.
 
 ---
