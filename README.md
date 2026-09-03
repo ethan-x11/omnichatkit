@@ -448,7 +448,7 @@ import { serveOmniChat } from "omnichatkit/server";
 
 const handler = serveOmniChat({
   basePath: "/api",
-  backendUrl: process.env.BACKEND_URL || "http://localhost:8000/api/",
+  backendUrl: process.env.BACKEND_URL,
   
   // Optional: Automatically extract identity from requests
   identifyUser: async (req) => {
