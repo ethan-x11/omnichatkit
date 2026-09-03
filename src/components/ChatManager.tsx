@@ -137,16 +137,6 @@ export function ChatManager({
 
   const activeSessionIdRef = React.useRef(activeSessionId);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const [initializeTextarea] = useOverlayScrollbars({
-    options: { scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } },
-    defer: true
-  });
-
-  React.useEffect(() => {
-    if (textareaRef.current) {
-      initializeTextarea(textareaRef.current);
-    }
-  }, [initializeTextarea]);
 
   React.useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
@@ -190,12 +180,12 @@ export function ChatManager({
         setIsAttachMenuOpen(false);
       }
     };
-    
+
     if (isAttachMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside, true);
       document.addEventListener('touchstart', handleClickOutside, true);
     }
-    
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside, true);
       document.removeEventListener('touchstart', handleClickOutside, true);
@@ -231,7 +221,7 @@ export function ChatManager({
       }
     }, 0);
   };
-  
+
   const removeAttachedFile = (index: number) => {
     setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
@@ -348,7 +338,7 @@ export function ChatManager({
         if (af.type.startsWith('image/')) type = 'image';
         else if (af.type.startsWith('audio/')) type = 'audio';
         else if (af.type.startsWith('video/')) type = 'video';
-        
+
         // Extract base64 part
         const base64Value = af.base64.includes(',') ? af.base64.split(',')[1] : af.base64;
 
@@ -362,12 +352,12 @@ export function ChatManager({
           }
         });
       });
-      
+
       append({
         role: 'user',
         content: contentArray
       });
-      
+
       if (setInput) setInput('');
       setAttachedFiles([]);
       return;
@@ -455,13 +445,13 @@ export function ChatManager({
         className={cn(`flex border rounded-xl flex-col relative ${chatContainerClass} ${sizeClass}`, typeof skeletonStyles.containerStyle === 'string' ? skeletonStyles.containerStyle : (typeof globalBackgroundStyle === 'string' ? globalBackgroundStyle : ""), className)}
         style={{ ...(typeof skeletonStyles.containerStyle === 'object' ? skeletonStyles.containerStyle : (typeof globalBackgroundStyle === 'object' ? globalBackgroundStyle : {})), ...combinedStyle }}
       >
-        <div 
+        <div
           className={cn("p-4 border-b flex items-center justify-between", typeof skeletonStyles.headerStyle === 'string' ? skeletonStyles.headerStyle : "")}
           style={typeof skeletonStyles.headerStyle === 'object' ? skeletonStyles.headerStyle : undefined}
         >
           <Skeleton className="h-6 w-32" />
         </div>
-        <div 
+        <div
           className={cn("flex-1 p-6 space-y-6 flex flex-col justify-end", typeof skeletonStyles.messageStyle === 'string' ? skeletonStyles.messageStyle : "")}
           style={typeof skeletonStyles.messageStyle === 'object' ? skeletonStyles.messageStyle : undefined}
         >
@@ -469,7 +459,7 @@ export function ChatManager({
           <Skeleton className="h-20 w-3/4 rounded-2xl self-start" />
           <Skeleton className="h-16 w-2/3 rounded-2xl self-end" />
         </div>
-        <div 
+        <div
           className={cn("p-4 border-t", typeof skeletonStyles.inputStyle === 'string' ? skeletonStyles.inputStyle : "")}
           style={typeof skeletonStyles.inputStyle === 'object' ? skeletonStyles.inputStyle : undefined}
         >
@@ -544,543 +534,543 @@ export function ChatManager({
         <div className={`flex flex-col flex-1 h-full min-w-0`}>
           <div className="relative flex-1 min-h-0 flex flex-col">
             <OverlayScrollbarsComponent
-            className={cn("flex-1 p-4", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
-            style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
-            events={{ scroll: handleScroll }}
-            options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
-            defer
-          >
-            {messages.length === 0 && welcomeScreen && (
-              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
-                {typeof welcomeScreen === 'boolean' ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <MessageCircle size={48} className="opacity-20" />
-                    <h3 className="text-lg font-medium text-foreground">Welcome to OmniChat</h3>
-                    <p>Start a conversation below to get help or generate dynamic UI components.</p>
-                  </div>
-                ) : React.isValidElement(welcomeScreen) ? (
-                  welcomeScreen
-                ) : typeof welcomeScreen === 'function' ? (
-                  React.createElement(welcomeScreen as React.FC<any>)
-                ) : (
-                  welcomeScreen as React.ReactNode
-                )}
-              </div>
-            )}
-            {messages.map((msg: any) => {
-              // Prefer parts (new API) over toolInvocations (deprecated). Fall back for AG-UI
-              // messages that are not Vercel AI SDK messages and won't have parts.
-              const toolParts = (msg.parts ?? []).filter((p: any) => p.type === 'tool-invocation');
-              const toolInvocations: any[] = toolParts.length > 0
-                ? toolParts.map((p: any) => p.toolInvocation)
-                : ((msg as any).toolInvocations ?? []);
-              const hasTool = toolInvocations.length > 0;
-
-              if ((msg.role as string) === 'reasoning') {
-                return (
-                  <details key={msg.id} className="mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group">
-                    <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
-                      <Brain size={14} className="animate-pulse" />
-                      <span>Reasoning</span>
-                      <ChevronDown size={14} className="ml-auto transition-transform group-open:rotate-180" />
-                    </summary>
-                    <div className="text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-2">{msg.content}</div>
-                  </details>
-                );
-              }
-
-              if ((msg.role as string) === 'activity') {
-                return (
-                  <div key={msg.id} className="mb-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 text-sm border border-blue-100 dark:border-blue-900">
-                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1 font-medium">
-                      <Activity size={14} />
-                      <span>Activity Update</span>
+              className={cn("flex-1 p-4", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
+              style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
+              events={{ scroll: handleScroll }}
+              options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
+              defer
+            >
+              {messages.length === 0 && welcomeScreen && (
+                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
+                  {typeof welcomeScreen === 'boolean' ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <MessageCircle size={48} className="opacity-20" />
+                      <h3 className="text-lg font-medium text-foreground">Welcome to OmniChat</h3>
+                      <p>Start a conversation below to get help or generate dynamic UI components.</p>
                     </div>
-                    <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
-                      {msg.content}
-                    </div>
-                  </div>
-                );
-              }
+                  ) : React.isValidElement(welcomeScreen) ? (
+                    welcomeScreen
+                  ) : typeof welcomeScreen === 'function' ? (
+                    React.createElement(welcomeScreen as React.FC<any>)
+                  ) : (
+                    welcomeScreen as React.ReactNode
+                  )}
+                </div>
+              )}
+              {messages.map((msg: any) => {
+                // Prefer parts (new API) over toolInvocations (deprecated). Fall back for AG-UI
+                // messages that are not Vercel AI SDK messages and won't have parts.
+                const toolParts = (msg.parts ?? []).filter((p: any) => p.type === 'tool-invocation');
+                const toolInvocations: any[] = toolParts.length > 0
+                  ? toolParts.map((p: any) => p.toolInvocation)
+                  : ((msg as any).toolInvocations ?? []);
+                const hasTool = toolInvocations.length > 0;
 
-              if ((msg.role as string) === 'tool') {
-                return (
-                  <div key={msg.id} className="mb-4 bg-green-50 dark:bg-green-950/30 rounded-lg p-3 text-sm border border-green-100 dark:border-green-900">
-                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1 font-medium">
-                      <CheckCircle2 size={14} />
-                      <span>Tool Result</span>
-                    </div>
-                    <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
-                      {msg.content}
-                    </div>
-                  </div>
-                );
-              }
-
-              if ((msg.role as string) === 'system') {
-                if (msg.content === 'Response Stopped') {
+                if ((msg.role as string) === 'reasoning') {
                   return (
-                    <div
-                      key={msg.id}
-                      className={cn(
-                        "mb-4 flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400",
-                        typeof messageStyle.stopResponseStyle === 'string' ? messageStyle.stopResponseStyle : ""
-                      )}
-                      style={typeof messageStyle.stopResponseStyle === 'object' ? messageStyle.stopResponseStyle : undefined}
-                    >
-                      <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
-                      <span className="shrink-0 font-medium">Response Stopped</span>
-                      <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+                    <details key={msg.id} className="mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group">
+                      <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
+                        <Brain size={14} className="animate-pulse" />
+                        <span>Reasoning</span>
+                        <ChevronDown size={14} className="ml-auto transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-2">{msg.content}</div>
+                    </details>
+                  );
+                }
+
+                if ((msg.role as string) === 'activity') {
+                  return (
+                    <div key={msg.id} className="mb-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 text-sm border border-blue-100 dark:border-blue-900">
+                      <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1 font-medium">
+                        <Activity size={14} />
+                        <span>Activity Update</span>
+                      </div>
+                      <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
+                        {msg.content}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if ((msg.role as string) === 'tool') {
+                  return (
+                    <div key={msg.id} className="mb-4 bg-green-50 dark:bg-green-950/30 rounded-lg p-3 text-sm border border-green-100 dark:border-green-900">
+                      <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1 font-medium">
+                        <CheckCircle2 size={14} />
+                        <span>Tool Result</span>
+                      </div>
+                      <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
+                        {msg.content}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if ((msg.role as string) === 'system') {
+                  if (msg.content === 'Response Stopped') {
+                    return (
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "mb-4 flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400",
+                          typeof messageStyle.stopResponseStyle === 'string' ? messageStyle.stopResponseStyle : ""
+                        )}
+                        style={typeof messageStyle.stopResponseStyle === 'object' ? messageStyle.stopResponseStyle : undefined}
+                      >
+                        <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+                        <span className="shrink-0 font-medium">Response Stopped</span>
+                        <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={msg.id} className="mb-4 bg-zinc-100 dark:bg-zinc-900/50 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800">
+                      <div className="text-zinc-600 dark:text-zinc-400">
+                        {msg.content}
+                      </div>
+                    </div>
+                  );
+                }
+
+                const isUser = msg.role === 'user';
+                const customStyleRaw = isUser ? messageStyle.userMessageStyles : messageStyle.assistantMessageStyles;
+
+                let containerStyleClass = '';
+                let containerStyleObj: React.CSSProperties | undefined = undefined;
+                let bubbleStyleClass = '';
+                let bubbleStyleObj: React.CSSProperties | undefined = undefined;
+                let alignment: 'left' | 'right' | 'center' | undefined = undefined;
+                let badgeStyleRaw: any = undefined;
+                let subAgentBadgeStyleRaw: any = undefined;
+                let attachmentPreviewStylesRaw: any = undefined;
+
+                if (typeof customStyleRaw === 'string') {
+                  containerStyleClass = customStyleRaw;
+                } else if (typeof customStyleRaw === 'object' && customStyleRaw !== null) {
+                  if ('containerStyle' in customStyleRaw || 'bubbleStyle' in customStyleRaw || 'alignment' in customStyleRaw || 'badgeStyle' in customStyleRaw || 'subAgentBadgeStyle' in customStyleRaw) {
+                    const styleDef = customStyleRaw as any;
+                    containerStyleClass = typeof styleDef.containerStyle === 'string' ? styleDef.containerStyle : '';
+                    containerStyleObj = typeof styleDef.containerStyle === 'object' ? styleDef.containerStyle : undefined;
+
+                    bubbleStyleClass = typeof styleDef.bubbleStyle === 'string' ? styleDef.bubbleStyle : '';
+                    bubbleStyleObj = typeof styleDef.bubbleStyle === 'object' ? styleDef.bubbleStyle : undefined;
+
+                    alignment = styleDef.alignment;
+                    badgeStyleRaw = styleDef.badgeStyle;
+                    subAgentBadgeStyleRaw = styleDef.subAgentBadgeStyle;
+                    attachmentPreviewStylesRaw = styleDef.attachmentPreviewStyles;
+                  } else {
+                    containerStyleObj = customStyleRaw as React.CSSProperties;
+                  }
+                }
+
+                if (isUser) {
+                  if (!bubbleStyleClass && !bubbleStyleObj) {
+                    bubbleStyleClass = "bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 text-foreground shadow-sm dark:shadow-zinc-700/50 rounded-2xl px-4 py-2";
+                  }
+                  if (!alignment) alignment = 'right';
+                } else {
+                  if (!alignment) alignment = 'left';
+                }
+
+                const alignmentClass = alignment === 'left' ? 'flex flex-col items-start' : (alignment === 'right' ? 'flex flex-col items-end' : 'flex flex-col items-center text-left whitespace-normal');
+
+                let thinkingContent = '';
+                let mainContent: string = '';
+                let mediaContents: any[] = [];
+                let isActivity = (msg.role as string) === 'activity';
+                let isDeveloper = (msg.role as string) === 'developer';
+                let isReasoning = (msg.role as string) === 'reasoning';
+
+                if (isUser && Array.isArray(msg.content)) {
+                  mainContent = msg.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n\n');
+                  mediaContents = msg.content.filter((c: any) => c.type !== 'text');
+                } else if (isReasoning) {
+                  thinkingContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+                } else if (isActivity) {
+                  mainContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content, null, 2);
+                } else if (typeof msg.content === 'string') {
+                  mainContent = msg.content;
+                } else {
+                  mainContent = msg.content ? JSON.stringify(msg.content) : '';
+                }
+
+                if (!isUser && !isReasoning && !isActivity && !isDeveloper && typeof mainContent === 'string') {
+                  const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|<think\/>)/i;
+                  const match = mainContent.match(thinkRegex);
+                  if (match) {
+                    thinkingContent = match[1].trim();
+                    mainContent = mainContent.replace(match[0], '').trim();
+                  } else {
+                    if (mainContent.includes('<think>')) {
+                      const parts = mainContent.split('<think>');
+                      mainContent = parts[0].trim();
+                      thinkingContent = parts[1].trim();
+                    } else if (mainContent.includes('</think>') || mainContent.includes('<think/>')) {
+                      const closeTag = mainContent.includes('</think>') ? '</think>' : '<think/>';
+                      const parts = mainContent.split(closeTag);
+                      thinkingContent = parts[0].replace(/<think>/i, '').trim();
+                      mainContent = parts.slice(1).join(closeTag).trim();
+                    }
+                  }
+                }
+
+                if (isActivity) {
+                  const actStyles = (messageStyle as any).activityMessageStyles || {};
+                  const actContainerStyleClass = typeof actStyles === 'string' ? actStyles : (typeof actStyles.containerStyle === 'string' ? actStyles.containerStyle : "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg px-4 py-3 text-sm border border-blue-100 dark:border-blue-800 w-full");
+                  const actContainerStyleObj = typeof actStyles === 'object' && typeof actStyles.containerStyle === 'object' ? actStyles.containerStyle : {};
+
+                  return (
+                    <div key={msg.id} className={cn("mb-4 group relative w-full flex flex-col", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
+                      <div className={actContainerStyleClass} style={actContainerStyleObj}>
+                        <div className="flex items-center gap-2 font-medium mb-1">
+                          <Activity size={14} />
+                          {(msg as any).activityType || 'Activity'}
+                        </div>
+                        <pre className="text-xs overflow-x-auto p-2 bg-white/50 dark:bg-black/20 rounded">
+                          {mainContent}
+                        </pre>
+                      </div>
                     </div>
                   );
                 }
 
                 return (
-                  <div key={msg.id} className="mb-4 bg-zinc-100 dark:bg-zinc-900/50 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800">
-                    <div className="text-zinc-600 dark:text-zinc-400">
-                      {msg.content}
-                    </div>
-                  </div>
-                );
-              }
-
-              const isUser = msg.role === 'user';
-              const customStyleRaw = isUser ? messageStyle.userMessageStyles : messageStyle.assistantMessageStyles;
-
-              let containerStyleClass = '';
-              let containerStyleObj: React.CSSProperties | undefined = undefined;
-              let bubbleStyleClass = '';
-              let bubbleStyleObj: React.CSSProperties | undefined = undefined;
-              let alignment: 'left' | 'right' | 'center' | undefined = undefined;
-              let badgeStyleRaw: any = undefined;
-              let subAgentBadgeStyleRaw: any = undefined;
-              let attachmentPreviewStylesRaw: any = undefined;
-
-              if (typeof customStyleRaw === 'string') {
-                containerStyleClass = customStyleRaw;
-              } else if (typeof customStyleRaw === 'object' && customStyleRaw !== null) {
-                if ('containerStyle' in customStyleRaw || 'bubbleStyle' in customStyleRaw || 'alignment' in customStyleRaw || 'badgeStyle' in customStyleRaw || 'subAgentBadgeStyle' in customStyleRaw) {
-                  const styleDef = customStyleRaw as any;
-                  containerStyleClass = typeof styleDef.containerStyle === 'string' ? styleDef.containerStyle : '';
-                  containerStyleObj = typeof styleDef.containerStyle === 'object' ? styleDef.containerStyle : undefined;
-
-                  bubbleStyleClass = typeof styleDef.bubbleStyle === 'string' ? styleDef.bubbleStyle : '';
-                  bubbleStyleObj = typeof styleDef.bubbleStyle === 'object' ? styleDef.bubbleStyle : undefined;
-
-                  alignment = styleDef.alignment;
-                  badgeStyleRaw = styleDef.badgeStyle;
-                  subAgentBadgeStyleRaw = styleDef.subAgentBadgeStyle;
-                  attachmentPreviewStylesRaw = styleDef.attachmentPreviewStyles;
-                } else {
-                  containerStyleObj = customStyleRaw as React.CSSProperties;
-                }
-              }
-
-              if (isUser) {
-                if (!bubbleStyleClass && !bubbleStyleObj) {
-                  bubbleStyleClass = "bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 text-foreground shadow-sm dark:shadow-zinc-700/50 rounded-2xl px-4 py-2";
-                }
-                if (!alignment) alignment = 'right';
-              } else {
-                if (!alignment) alignment = 'left';
-              }
-
-              const alignmentClass = alignment === 'left' ? 'flex flex-col items-start' : (alignment === 'right' ? 'flex flex-col items-end' : 'flex flex-col items-center text-left whitespace-normal');
-
-              let thinkingContent = '';
-              let mainContent: string = '';
-              let mediaContents: any[] = [];
-              let isActivity = (msg.role as string) === 'activity';
-              let isDeveloper = (msg.role as string) === 'developer';
-              let isReasoning = (msg.role as string) === 'reasoning';
-
-              if (isUser && Array.isArray(msg.content)) {
-                mainContent = msg.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n\n');
-                mediaContents = msg.content.filter((c: any) => c.type !== 'text');
-              } else if (isReasoning) {
-                thinkingContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-              } else if (isActivity) {
-                mainContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content, null, 2);
-              } else if (typeof msg.content === 'string') {
-                mainContent = msg.content;
-              } else {
-                mainContent = msg.content ? JSON.stringify(msg.content) : '';
-              }
-
-              if (!isUser && !isReasoning && !isActivity && !isDeveloper && typeof mainContent === 'string') {
-                const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|<think\/>)/i;
-                const match = mainContent.match(thinkRegex);
-                if (match) {
-                  thinkingContent = match[1].trim();
-                  mainContent = mainContent.replace(match[0], '').trim();
-                } else {
-                  if (mainContent.includes('<think>')) {
-                    const parts = mainContent.split('<think>');
-                    mainContent = parts[0].trim();
-                    thinkingContent = parts[1].trim();
-                  } else if (mainContent.includes('</think>') || mainContent.includes('<think/>')) {
-                    const closeTag = mainContent.includes('</think>') ? '</think>' : '<think/>';
-                    const parts = mainContent.split(closeTag);
-                    thinkingContent = parts[0].replace(/<think>/i, '').trim();
-                    mainContent = parts.slice(1).join(closeTag).trim();
-                  }
-                }
-              }
-
-              if (isActivity) {
-                const actStyles = (messageStyle as any).activityMessageStyles || {};
-                const actContainerStyleClass = typeof actStyles === 'string' ? actStyles : (typeof actStyles.containerStyle === 'string' ? actStyles.containerStyle : "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg px-4 py-3 text-sm border border-blue-100 dark:border-blue-800 w-full");
-                const actContainerStyleObj = typeof actStyles === 'object' && typeof actStyles.containerStyle === 'object' ? actStyles.containerStyle : {};
-
-                return (
-                  <div key={msg.id} className={cn("mb-4 group relative w-full flex flex-col", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
-                    <div className={actContainerStyleClass} style={actContainerStyleObj}>
-                      <div className="flex items-center gap-2 font-medium mb-1">
-                        <Activity size={14} />
-                        {(msg as any).activityType || 'Activity'}
-                      </div>
-                      <pre className="text-xs overflow-x-auto p-2 bg-white/50 dark:bg-black/20 rounded">
-                        {mainContent}
-                      </pre>
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div key={msg.id} className={cn("mb-4 group relative w-full", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
-                  {(mainContent || thinkingContent || (!thinkingContent && !hasTool)) && (
-                    <div className="font-bold mb-2 flex items-center gap-2 min-w-0 max-w-full">
-                      {isUser ? (
-                        renderBadge(labels.userLabel ?? 'You', badgeStyleRaw, "flex items-center gap-1", "", <User size={14} />)
-                      ) : isDeveloper ? (
-                        renderBadge('Developer', (messageStyle as any).developerMessageStyles?.badgeStyle || badgeStyleRaw, "flex items-center gap-1", "", <Wrench size={14} />)
-                      ) : (
-                        <>
-                          {renderBadge(labels.assistantLabel ?? 'AI', badgeStyleRaw, "flex items-center gap-1", "", <Bot size={14} />)}
-                          {messageToAgentMap.get(msg.id) && renderBadge(
-                            messageToAgentMap.get(msg.id) as string,
-                            subAgentBadgeStyleRaw,
-                            "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1",
-                            "text-zinc-700 dark:text-zinc-300",
-                            <Bot size={12} />
-                          )}
-                        </>
-                      )}
-
-                    </div>
-                  )}
-
-                  {showReasoning && thinkingContent && (() => {
-                    const tStyles = messageStyle.thinkingStepStyles || {};
-                    const thContainerStyle = tStyles.containerStyle;
-                    const thIconStyles = tStyles.iconStyles || {};
-                    const thTitleStyle = tStyles.titleStyle;
-                    const thDataStyle = tStyles.dataStyle;
-
-                    return (
-                      <details 
-                        className={cn("mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group/think", typeof thContainerStyle === 'string' ? thContainerStyle : "")}
-                        style={typeof thContainerStyle === 'object' ? thContainerStyle : {}}
-                      >
-                        <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
-                          <span 
-                            className={cn(typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : "")}
-                            style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
-                          >
-                            {thIconStyles.icon || <Brain size={14} className="animate-pulse" />}
-                          </span>
-                          <span
-                            className={typeof thTitleStyle === 'string' ? thTitleStyle : ""}
-                            style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}
-                          >
-                            Reasoning
-                          </span>
-                          <ChevronDown size={14} className="ml-auto transition-transform group-open/think:rotate-180" />
-                        </summary>
-                        <div 
-                          className={cn("mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-4", typeof thDataStyle === 'string' ? thDataStyle : "")}
-                          style={typeof thDataStyle === 'object' ? thDataStyle : {}}
-                        >
-                          <MarkdownRenderer text={thinkingContent} className="text-zinc-600 dark:text-zinc-400" />
-                        </div>
-                      </details>
-                    );
-                  })()}
-
-
-                  {(mainContent || (!thinkingContent && !hasTool)) ? (
-                    <div className="mt-1 flex flex-col relative min-w-0 max-w-full">
-                      <div
-                        className={cn("relative z-10 break-words min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass, isDeveloper ? "font-mono text-sm" : "")}
-                        style={{
-                          ...bubbleStyleObj,
-                          ...(alignment === 'right' ? { borderBottomRightRadius: '4px' } : {}),
-                          ...(alignment === 'left' ? { borderBottomLeftRadius: '4px' } : {})
-                        }}
-                      >
-                        {mediaContents.length > 0 && (
-                          <div 
-                            className={cn("flex flex-wrap gap-2 mb-2 w-full", typeof attachmentPreviewStylesRaw?.containerStyle === 'string' ? attachmentPreviewStylesRaw.containerStyle : "")}
-                            style={typeof attachmentPreviewStylesRaw?.containerStyle === 'object' ? attachmentPreviewStylesRaw.containerStyle : undefined}
-                          >
-                            {mediaContents.map((media, i) => {
-                              const dataUrl = `data:${media.source?.mimeType || 'application/octet-stream'};base64,${media.source?.value}`;
-                              const fileName = media.source?.name || 'Attachment';
-                              const isImage = media.type === 'image' || media.source?.mimeType?.startsWith('image/');
-                              const isVideo = media.type === 'video' || media.source?.mimeType?.startsWith('video/');
-                              const isAudio = media.type === 'audio' || media.source?.mimeType?.startsWith('audio/');
-                              
-                              return (
-                                <div 
-                                  key={i} 
-                                  className={cn("h-12 w-12 border rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex flex-col items-center justify-center relative cursor-pointer hover:opacity-80 transition-opacity shrink-0", typeof attachmentPreviewStylesRaw?.itemStyle === 'string' ? attachmentPreviewStylesRaw.itemStyle : "")}
-                                  style={typeof attachmentPreviewStylesRaw?.itemStyle === 'object' ? attachmentPreviewStylesRaw.itemStyle : undefined}
-                                  onClick={() => {
-                                    if (media.type === 'document' && media.source?.mimeType === 'application/pdf') {
-                                      // Can't easily use createObjectURL from base64 synchronously without Blob, so use data URL
-                                      const pdfWindow = window.open("");
-                                      if (pdfWindow) {
-                                        pdfWindow.document.write(`<iframe width='100%' height='100%' src='${dataUrl}'></iframe>`);
-                                      }
-                                    } else if (isImage || isVideo || isAudio || (media.type === 'document' && media.source?.mimeType?.startsWith('text/'))) {
-                                      setSelectedPreviewFile({
-                                        file: new File([new Blob()], fileName),
-                                        base64: dataUrl,
-                                        type: media.source?.mimeType || ''
-                                      });
-                                    }
-                                  }}
-                                >
-                                  {isImage ? (
-                                    <img src={dataUrl} className="h-full w-full object-cover" alt={fileName} />
-                                  ) : isVideo ? (
-                                    <Video size={18} className="text-zinc-500" />
-                                  ) : isAudio ? (
-                                    <Mic size={18} className="text-zinc-500" />
-                                  ) : (
-                                    <FileText size={18} className="text-zinc-500" />
-                                  )}
-                                  <div className="absolute bottom-0 inset-x-0 bg-black/50 text-[8px] text-white truncate px-1 text-center backdrop-blur-sm pb-0.5 leading-none pt-0.5">
-                                    {fileName}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
+                  <div key={msg.id} className={cn("mb-4 group relative w-full", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
+                    {(mainContent || thinkingContent || (!thinkingContent && !hasTool)) && (
+                      <div className="font-bold mb-2 flex items-center gap-2 min-w-0 max-w-full">
+                        {isUser ? (
+                          renderBadge(labels.userLabel ?? 'You', badgeStyleRaw, "flex items-center gap-1", "", <User size={14} />)
+                        ) : isDeveloper ? (
+                          renderBadge('Developer', (messageStyle as any).developerMessageStyles?.badgeStyle || badgeStyleRaw, "flex items-center gap-1", "", <Wrench size={14} />)
+                        ) : (
+                          <>
+                            {renderBadge(labels.assistantLabel ?? 'AI', badgeStyleRaw, "flex items-center gap-1", "", <Bot size={14} />)}
+                            {messageToAgentMap.get(msg.id) && renderBadge(
+                              messageToAgentMap.get(msg.id) as string,
+                              subAgentBadgeStyleRaw,
+                              "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1",
+                              "text-zinc-700 dark:text-zinc-300",
+                              <Bot size={12} />
+                            )}
+                          </>
                         )}
-                        <MarkdownRenderer
-                          text={mainContent}
-                        />
+
                       </div>
-                      <div className={cn(
-                        "opacity-0 group-hover:opacity-100 transition-opacity flex mt-1",
-                        alignment === 'right' ? 'justify-end' : 'justify-start'
-                      )}>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                          onClick={() => handleCopy(msg.id, msg.content)}
-                          title="Copy message"
+                    )}
+
+                    {showReasoning && thinkingContent && (() => {
+                      const tStyles = messageStyle.thinkingStepStyles || {};
+                      const thContainerStyle = tStyles.containerStyle;
+                      const thIconStyles = tStyles.iconStyles || {};
+                      const thTitleStyle = tStyles.titleStyle;
+                      const thDataStyle = tStyles.dataStyle;
+
+                      return (
+                        <details
+                          className={cn("mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group/think", typeof thContainerStyle === 'string' ? thContainerStyle : "")}
+                          style={typeof thContainerStyle === 'object' ? thContainerStyle : {}}
                         >
-                          {copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {showToolCalls && hasTool && (
-                    <div className="mt-3 flex flex-col gap-2 w-full min-w-0 max-w-full">
-                      {toolInvocations.map((tool: any) => {
-                        // When this is an A2UI tool call, show a status pill.
-                        // The actual canvas is rendered externally.
-                        if (hasA2UI && tool.toolName === a2uiToolName) {
-                          return (
-                            <A2UIToolPill
-                              key={tool.toolCallId}
-                              tool={tool}
-                              agentId={agentId}
-                            />
-                          );
-                        }
-
-                        const tcStyles = messageStyle.toolCallStepStyles || {};
-                        const headerStyles = tcStyles.headerStyles || {};
-                        const reqStyles = tcStyles.requestDataStyles || {};
-                        const resStyles = tcStyles.responseDataStyles || {};
-
-                        return (
-                          <details 
-                            key={tool.toolCallId} 
-                            className={cn("group [&_summary::-webkit-details-marker]:hidden mb-2", typeof tcStyles.containerStyle === 'string' ? tcStyles.containerStyle : "")}
-                            style={typeof tcStyles.containerStyle === 'object' ? tcStyles.containerStyle : {}}
+                          <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
+                            <span
+                              className={cn(typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : "")}
+                              style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
+                            >
+                              {thIconStyles.icon || <Brain size={14} className="animate-pulse" />}
+                            </span>
+                            <span
+                              className={typeof thTitleStyle === 'string' ? thTitleStyle : ""}
+                              style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}
+                            >
+                              Reasoning
+                            </span>
+                            <ChevronDown size={14} className="ml-auto transition-transform group-open/think:rotate-180" />
+                          </summary>
+                          <div
+                            className={cn("mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-4", typeof thDataStyle === 'string' ? thDataStyle : "")}
+                            style={typeof thDataStyle === 'object' ? thDataStyle : {}}
                           >
-                            <summary className="flex items-center justify-between cursor-pointer list-none p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/50">
-                              <div className="flex items-center gap-2">
-                                <span 
-                                  className={typeof headerStyles.iconStyles?.iconStyle === 'string' ? headerStyles.iconStyles.iconStyle : ""}
-                                  style={typeof headerStyles.iconStyles?.iconStyle === 'object' ? headerStyles.iconStyles.iconStyle : {}}
-                                >
-                                  {headerStyles.iconStyles?.icon || <Wrench size={14} />}
-                                </span>
-                                <span className="flex items-center">
-                                  <span
-                                    className={typeof headerStyles.titleStyles?.titleStyle === 'string' ? headerStyles.titleStyles.titleStyle : ""}
-                                    style={typeof headerStyles.titleStyles?.titleStyle === 'object' ? headerStyles.titleStyles.titleStyle : {}}
+                            <MarkdownRenderer text={thinkingContent} className="text-zinc-600 dark:text-zinc-400" />
+                          </div>
+                        </details>
+                      );
+                    })()}
+
+
+                    {(mainContent || (!thinkingContent && !hasTool)) ? (
+                      <div className="mt-1 flex flex-col relative min-w-0 max-w-full">
+                        <div
+                          className={cn("relative z-10 break-words min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass, isDeveloper ? "font-mono text-sm" : "")}
+                          style={{
+                            ...bubbleStyleObj,
+                            ...(alignment === 'right' ? { borderBottomRightRadius: '4px' } : {}),
+                            ...(alignment === 'left' ? { borderBottomLeftRadius: '4px' } : {})
+                          }}
+                        >
+                          {mediaContents.length > 0 && (
+                            <div
+                              className={cn("flex flex-wrap gap-2 mb-2 w-full", typeof attachmentPreviewStylesRaw?.containerStyle === 'string' ? attachmentPreviewStylesRaw.containerStyle : "")}
+                              style={typeof attachmentPreviewStylesRaw?.containerStyle === 'object' ? attachmentPreviewStylesRaw.containerStyle : undefined}
+                            >
+                              {mediaContents.map((media, i) => {
+                                const dataUrl = `data:${media.source?.mimeType || 'application/octet-stream'};base64,${media.source?.value}`;
+                                const fileName = media.source?.name || 'Attachment';
+                                const isImage = media.type === 'image' || media.source?.mimeType?.startsWith('image/');
+                                const isVideo = media.type === 'video' || media.source?.mimeType?.startsWith('video/');
+                                const isAudio = media.type === 'audio' || media.source?.mimeType?.startsWith('audio/');
+
+                                return (
+                                  <div
+                                    key={i}
+                                    className={cn("h-12 w-12 border rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex flex-col items-center justify-center relative cursor-pointer hover:opacity-80 transition-opacity shrink-0", typeof attachmentPreviewStylesRaw?.itemStyle === 'string' ? attachmentPreviewStylesRaw.itemStyle : "")}
+                                    style={typeof attachmentPreviewStylesRaw?.itemStyle === 'object' ? attachmentPreviewStylesRaw.itemStyle : undefined}
+                                    onClick={() => {
+                                      if (media.type === 'document' && media.source?.mimeType === 'application/pdf') {
+                                        // Can't easily use createObjectURL from base64 synchronously without Blob, so use data URL
+                                        const pdfWindow = window.open("");
+                                        if (pdfWindow) {
+                                          pdfWindow.document.write(`<iframe width='100%' height='100%' src='${dataUrl}'></iframe>`);
+                                        }
+                                      } else if (isImage || isVideo || isAudio || (media.type === 'document' && media.source?.mimeType?.startsWith('text/'))) {
+                                        setSelectedPreviewFile({
+                                          file: new File([new Blob()], fileName),
+                                          base64: dataUrl,
+                                          type: media.source?.mimeType || ''
+                                        });
+                                      }
+                                    }}
                                   >
-                                    Tool Call:
-                                  </span>
-                                  <span
-                                    className={cn("ml-1", typeof headerStyles.titleStyles?.toolNameStyle === 'string' ? headerStyles.titleStyles.toolNameStyle : "")}
-                                    style={typeof headerStyles.titleStyles?.toolNameStyle === 'object' ? headerStyles.titleStyles.toolNameStyle : {}}
-                                  >
-                                    {tool.toolName}
-                                  </span>
-                                  {messageToAgentMap.get(tool.toolCallId) && renderBadge(
-                                    messageToAgentMap.get(tool.toolCallId) as string,
-                                    subAgentBadgeStyleRaw,
-                                    "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1 ml-2",
-                                    "text-zinc-700 dark:text-zinc-300",
-                                    <Bot size={12} />
-                                  )}
-                                </span>
-                              </div>
-                              <ChevronDown size={14} className="transition-transform duration-200 group-open:rotate-180 opacity-50" />
-                            </summary>
-                            <div className="p-3 border border-t-0 border-zinc-200 dark:border-zinc-800 rounded-b-md bg-zinc-50/50 dark:bg-zinc-900/25 -mt-2 pt-4">
-                              {reqStyles.titleStyle || reqStyles.icon ? (
-                                <div className="font-medium mb-1 flex items-center gap-1">
-                                  <span
-                                    className={typeof reqStyles.iconStyle === 'string' ? reqStyles.iconStyle : ""}
-                                    style={typeof reqStyles.iconStyle === 'object' ? reqStyles.iconStyle : {}}
-                                  >
-                                    {reqStyles.icon}
-                                  </span>
-                                  <span
-                                    className={typeof reqStyles.titleStyle === 'string' ? reqStyles.titleStyle : ""}
-                                    style={typeof reqStyles.titleStyle === 'object' ? reqStyles.titleStyle : {}}
-                                  >
-                                    Request
-                                  </span>
-                                </div>
-                              ) : null}
-                              <div 
-                                className={cn("overflow-x-auto rounded-md text-xs", typeof reqStyles.dataStyle === 'string' ? reqStyles.dataStyle : "")}
-                                style={typeof reqStyles.dataStyle === 'object' ? reqStyles.dataStyle : {}}
-                              >
-                                <MarkdownRenderer text={`\`\`\`json\n${typeof tool.args === 'string' ? tool.args : JSON.stringify(tool.args, null, 2)}\n\`\`\``} />
-                              </div>
-                              {tool.result && (
-                                <div className="mt-2 bg-green-50 dark:bg-green-950/30 rounded p-2 text-xs border border-green-100 dark:border-green-900">
-                                  <div className="text-green-600 dark:text-green-400 font-medium mb-1 flex items-center gap-1">
-                                    <span
-                                      className={typeof resStyles.iconStyle === 'string' ? resStyles.iconStyle : ""}
-                                      style={typeof resStyles.iconStyle === 'object' ? resStyles.iconStyle : {}}
-                                    >
-                                      {resStyles.icon || <CheckCircle2 size={12} />}
-                                    </span>
-                                    <span
-                                      className={typeof resStyles.titleStyle === 'string' ? resStyles.titleStyle : ""}
-                                      style={typeof resStyles.titleStyle === 'object' ? resStyles.titleStyle : {}}
-                                    >
-                                      Result
-                                    </span>
+                                    {isImage ? (
+                                      <img src={dataUrl} className="h-full w-full object-cover" alt={fileName} />
+                                    ) : isVideo ? (
+                                      <Video size={18} className="text-zinc-500" />
+                                    ) : isAudio ? (
+                                      <Mic size={18} className="text-zinc-500" />
+                                    ) : (
+                                      <FileText size={18} className="text-zinc-500" />
+                                    )}
+                                    <div className="absolute bottom-0 inset-x-0 bg-black/50 text-[8px] text-white truncate px-1 text-center backdrop-blur-sm pb-0.5 leading-none pt-0.5">
+                                      {fileName}
+                                    </div>
                                   </div>
-                                  <div 
-                                    className={cn("overflow-x-auto rounded-md text-xs [&_.prose]:text-zinc-700 dark:[&_.prose]:text-zinc-300", typeof resStyles.dataStyle === 'string' ? resStyles.dataStyle : "")}
-                                    style={typeof resStyles.dataStyle === 'object' ? resStyles.dataStyle : {}}
-                                  >
-                                    <MarkdownRenderer text={`\`\`\`json\n${typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)}\n\`\`\``} />
-                                  </div>
-                                </div>
-                              )}
+                                );
+                              })}
                             </div>
-                          </details>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                          )}
+                          <MarkdownRenderer
+                            text={mainContent}
+                          />
+                        </div>
+                        <div className={cn(
+                          "opacity-0 group-hover:opacity-100 transition-opacity flex mt-1",
+                          alignment === 'right' ? 'justify-end' : 'justify-start'
+                        )}>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                            onClick={() => handleCopy(msg.id, msg.content)}
+                            title="Copy message"
+                          >
+                            {copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
 
-            {(() => {
-              // Extract active lifecycle events
-              const runError = events.find((e: any) => {
-                if (e.type !== 'RUN_ERROR' && e.type !== 'RunError') return false;
-                const msg = String(e.message).toLowerCase();
-                return !msg.includes('aborted') && !msg.includes('abort');
-              });
-              if (runError) {
-                return (
-                  <div className="mb-4 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 text-sm border border-red-200 dark:border-red-900">
-                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1 font-medium">
-                      <AlertCircle size={14} />
-                      <span>Error</span>
-                    </div>
-                    <div className="text-red-700 dark:text-red-300">{runError.message || 'An error occurred during the run.'}</div>
+                    {showToolCalls && hasTool && (
+                      <div className="mt-3 flex flex-col gap-2 w-full min-w-0 max-w-full">
+                        {toolInvocations.map((tool: any) => {
+                          // When this is an A2UI tool call, show a status pill.
+                          // The actual canvas is rendered externally.
+                          if (hasA2UI && tool.toolName === a2uiToolName) {
+                            return (
+                              <A2UIToolPill
+                                key={tool.toolCallId}
+                                tool={tool}
+                                agentId={agentId}
+                              />
+                            );
+                          }
+
+                          const tcStyles = messageStyle.toolCallStepStyles || {};
+                          const headerStyles = tcStyles.headerStyles || {};
+                          const reqStyles = tcStyles.requestDataStyles || {};
+                          const resStyles = tcStyles.responseDataStyles || {};
+
+                          return (
+                            <details
+                              key={tool.toolCallId}
+                              className={cn("group [&_summary::-webkit-details-marker]:hidden mb-2", typeof tcStyles.containerStyle === 'string' ? tcStyles.containerStyle : "")}
+                              style={typeof tcStyles.containerStyle === 'object' ? tcStyles.containerStyle : {}}
+                            >
+                              <summary className="flex items-center justify-between cursor-pointer list-none p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/50">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={typeof headerStyles.iconStyles?.iconStyle === 'string' ? headerStyles.iconStyles.iconStyle : ""}
+                                    style={typeof headerStyles.iconStyles?.iconStyle === 'object' ? headerStyles.iconStyles.iconStyle : {}}
+                                  >
+                                    {headerStyles.iconStyles?.icon || <Wrench size={14} />}
+                                  </span>
+                                  <span className="flex items-center">
+                                    <span
+                                      className={typeof headerStyles.titleStyles?.titleStyle === 'string' ? headerStyles.titleStyles.titleStyle : ""}
+                                      style={typeof headerStyles.titleStyles?.titleStyle === 'object' ? headerStyles.titleStyles.titleStyle : {}}
+                                    >
+                                      Tool Call:
+                                    </span>
+                                    <span
+                                      className={cn("ml-1", typeof headerStyles.titleStyles?.toolNameStyle === 'string' ? headerStyles.titleStyles.toolNameStyle : "")}
+                                      style={typeof headerStyles.titleStyles?.toolNameStyle === 'object' ? headerStyles.titleStyles.toolNameStyle : {}}
+                                    >
+                                      {tool.toolName}
+                                    </span>
+                                    {messageToAgentMap.get(tool.toolCallId) && renderBadge(
+                                      messageToAgentMap.get(tool.toolCallId) as string,
+                                      subAgentBadgeStyleRaw,
+                                      "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1 ml-2",
+                                      "text-zinc-700 dark:text-zinc-300",
+                                      <Bot size={12} />
+                                    )}
+                                  </span>
+                                </div>
+                                <ChevronDown size={14} className="transition-transform duration-200 group-open:rotate-180 opacity-50" />
+                              </summary>
+                              <div className="p-3 border border-t-0 border-zinc-200 dark:border-zinc-800 rounded-b-md bg-zinc-50/50 dark:bg-zinc-900/25 -mt-2 pt-4">
+                                {reqStyles.titleStyle || reqStyles.icon ? (
+                                  <div className="font-medium mb-1 flex items-center gap-1">
+                                    <span
+                                      className={typeof reqStyles.iconStyle === 'string' ? reqStyles.iconStyle : ""}
+                                      style={typeof reqStyles.iconStyle === 'object' ? reqStyles.iconStyle : {}}
+                                    >
+                                      {reqStyles.icon}
+                                    </span>
+                                    <span
+                                      className={typeof reqStyles.titleStyle === 'string' ? reqStyles.titleStyle : ""}
+                                      style={typeof reqStyles.titleStyle === 'object' ? reqStyles.titleStyle : {}}
+                                    >
+                                      Request
+                                    </span>
+                                  </div>
+                                ) : null}
+                                <div
+                                  className={cn("overflow-x-auto rounded-md text-xs", typeof reqStyles.dataStyle === 'string' ? reqStyles.dataStyle : "")}
+                                  style={typeof reqStyles.dataStyle === 'object' ? reqStyles.dataStyle : {}}
+                                >
+                                  <MarkdownRenderer text={`\`\`\`json\n${typeof tool.args === 'string' ? tool.args : JSON.stringify(tool.args, null, 2)}\n\`\`\``} />
+                                </div>
+                                {tool.result && (
+                                  <div className="mt-2 bg-green-50 dark:bg-green-950/30 rounded p-2 text-xs border border-green-100 dark:border-green-900">
+                                    <div className="text-green-600 dark:text-green-400 font-medium mb-1 flex items-center gap-1">
+                                      <span
+                                        className={typeof resStyles.iconStyle === 'string' ? resStyles.iconStyle : ""}
+                                        style={typeof resStyles.iconStyle === 'object' ? resStyles.iconStyle : {}}
+                                      >
+                                        {resStyles.icon || <CheckCircle2 size={12} />}
+                                      </span>
+                                      <span
+                                        className={typeof resStyles.titleStyle === 'string' ? resStyles.titleStyle : ""}
+                                        style={typeof resStyles.titleStyle === 'object' ? resStyles.titleStyle : {}}
+                                      >
+                                        Result
+                                      </span>
+                                    </div>
+                                    <div
+                                      className={cn("overflow-x-auto rounded-md text-xs [&_.prose]:text-zinc-700 dark:[&_.prose]:text-zinc-300", typeof resStyles.dataStyle === 'string' ? resStyles.dataStyle : "")}
+                                      style={typeof resStyles.dataStyle === 'object' ? resStyles.dataStyle : {}}
+                                    >
+                                      <MarkdownRenderer text={`\`\`\`json\n${typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)}\n\`\`\``} />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </details>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
-              }
+              })}
 
-              if (isLoading) {
-                // Find the latest step event
-                const stepEvents = events.filter((e: any) => e.type === 'STEP_STARTED' || e.type === 'StepStarted' || e.type === 'STEP_FINISHED' || e.type === 'StepFinished');
-                const lastStep = stepEvents[stepEvents.length - 1];
-                const activeStepName = (lastStep && (lastStep.type === 'STEP_STARTED' || lastStep.type === 'StepStarted')) ? lastStep.stepName : null;
+              {(() => {
+                // Extract active lifecycle events
+                const runError = events.find((e: any) => {
+                  if (e.type !== 'RUN_ERROR' && e.type !== 'RunError') return false;
+                  const msg = String(e.message).toLowerCase();
+                  return !msg.includes('aborted') && !msg.includes('abort');
+                });
+                if (runError) {
+                  return (
+                    <div className="mb-4 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 text-sm border border-red-200 dark:border-red-900">
+                      <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1 font-medium">
+                        <AlertCircle size={14} />
+                        <span>Error</span>
+                      </div>
+                      <div className="text-red-700 dark:text-red-300">{runError.message || 'An error occurred during the run.'}</div>
+                    </div>
+                  );
+                }
 
-                const tStyles = messageStyle.thinkingStepStyles || {};
-                const thContainerStyle = tStyles.containerStyle;
-                const thIconStyles = tStyles.iconStyles || {};
-                const thTitleStyle = tStyles.titleStyle;
+                if (isLoading) {
+                  // Find the latest step event
+                  const stepEvents = events.filter((e: any) => e.type === 'STEP_STARTED' || e.type === 'StepStarted' || e.type === 'STEP_FINISHED' || e.type === 'StepFinished');
+                  const lastStep = stepEvents[stepEvents.length - 1];
+                  const activeStepName = (lastStep && (lastStep.type === 'STEP_STARTED' || lastStep.type === 'StepStarted')) ? lastStep.stepName : null;
 
-                return (
-                  <div
-                    className={cn("text-sm text-zinc-500 animate-pulse flex items-center gap-2", typeof thContainerStyle === 'string' ? thContainerStyle : "")}
-                    style={typeof thContainerStyle === 'object' ? thContainerStyle : undefined}
-                  >
-                    <span 
-                      className={typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : ""}
-                      style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
+                  const tStyles = messageStyle.thinkingStepStyles || {};
+                  const thContainerStyle = tStyles.containerStyle;
+                  const thIconStyles = tStyles.iconStyles || {};
+                  const thTitleStyle = tStyles.titleStyle;
+
+                  return (
+                    <div
+                      className={cn("text-sm text-zinc-500 animate-pulse flex items-center gap-2", typeof thContainerStyle === 'string' ? thContainerStyle : "")}
+                      style={typeof thContainerStyle === 'object' ? thContainerStyle : undefined}
                     >
-                      {thIconStyles.icon || <PlayCircle size={14} className="animate-spin" />}
-                    </span>
-                    <span
-                      className={typeof thTitleStyle === 'string' ? thTitleStyle : ""}
-                      style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}
-                    >
-                      {activeStepName ? `Executing step: ${activeStepName}...` : 'AI is thinking...'}
-                    </span>
-                  </div>
-                );
-              }
-              return null;
-            })()}
-            <div ref={messagesEndRef} />
+                      <span
+                        className={typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : ""}
+                        style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
+                      >
+                        {thIconStyles.icon || <PlayCircle size={14} className="animate-spin" />}
+                      </span>
+                      <span
+                        className={typeof thTitleStyle === 'string' ? thTitleStyle : ""}
+                        style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}
+                      >
+                        {activeStepName ? `Executing step: ${activeStepName}...` : 'AI is thinking...'}
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              <div ref={messagesEndRef} />
             </OverlayScrollbarsComponent>
 
-          {userScrolledUp && (
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10 pointer-events-none">
-              <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-full shadow-md w-8 h-8 opacity-90 hover:opacity-100 pointer-events-auto bg-background border border-border text-foreground transition-opacity"
-                onClick={() => {
-                  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                  setUserScrolledUp(false);
-                }}
-                title="Scroll to bottom"
-              >
-                <span
-                  className={typeof scrollButtonStyles.iconStyles === 'string' ? scrollButtonStyles.iconStyles : ""}
-                  style={typeof scrollButtonStyles.iconStyles === 'object' ? scrollButtonStyles.iconStyles : {}}
+            {userScrolledUp && (
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10 pointer-events-none">
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="rounded-full shadow-md w-8 h-8 opacity-90 hover:opacity-100 pointer-events-auto bg-background border border-border text-foreground transition-opacity"
+                  onClick={() => {
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                    setUserScrolledUp(false);
+                  }}
+                  title="Scroll to bottom"
                 >
-                  {scrollButtonStyles.icon || <ArrowDown size={16} />}
-                </span>
-              </Button>
-            </div>
-          )}
+                  <span
+                    className={typeof scrollButtonStyles.iconStyles === 'string' ? scrollButtonStyles.iconStyles : ""}
+                    style={typeof scrollButtonStyles.iconStyles === 'object' ? scrollButtonStyles.iconStyles : {}}
+                  >
+                    {scrollButtonStyles.icon || <ArrowDown size={16} />}
+                  </span>
+                </Button>
+              </div>
+            )}
           </div>
 
           {promptChips?.promptChipList && promptChips.promptChipList.length > 0 && (promptChips.alwaysShow || messages.length === 0) && (
@@ -1116,22 +1106,22 @@ export function ChatManager({
             style={{ ...(typeof inputSectionStyle.containerStyle === 'object' ? inputSectionStyle.containerStyle : {}), ...(typeof inputSectionStyle.backgroundStyle === 'object' ? inputSectionStyle.backgroundStyle : {}) }}
           >
             {attachedFiles.length > 0 && (
-              <div 
+              <div
                 className={cn("flex gap-3 w-full overflow-x-auto pb-2 pt-2 px-2 shrink-0", typeof inputSectionStyle.attachmentMenuStyles?.previewContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.previewContainerStyles : "")}
                 style={typeof inputSectionStyle.attachmentMenuStyles?.previewContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.previewContainerStyles : undefined}
               >
                 {attachedFiles.map((file, idx) => (
                   <div key={idx} className="relative group shrink-0">
-                    <Button 
-                      type="button" 
-                      variant="destructive" 
-                      size="icon" 
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
                       className="absolute -top-2 -right-2 h-5 w-5 rounded-full z-10 flex items-center justify-center shadow-sm"
                       onClick={() => removeAttachedFile(idx)}
                     >
                       <X size={12} />
                     </Button>
-                    <div 
+                    <div
                       className={cn("h-16 w-16 border rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex flex-col items-center justify-center relative cursor-pointer hover:opacity-80 transition-opacity", typeof inputSectionStyle.attachmentMenuStyles?.previewItemContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.previewItemContainerStyles : "")}
                       style={typeof inputSectionStyle.attachmentMenuStyles?.previewItemContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.previewItemContainerStyles : undefined}
                       onClick={() => {
@@ -1162,12 +1152,12 @@ export function ChatManager({
             <div className="flex gap-2 w-full items-end relative">
               {inputTypeList && inputTypeList.length > 0 && (
                 <div className="relative shrink-0 flex items-center justify-center h-full mb-1" ref={attachMenuRef}>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
                     accept={selectedMimeTypeFilter}
-                    onChange={handleFileSelect} 
+                    onChange={handleFileSelect}
                   />
                   <Button
                     type="button"
@@ -1186,15 +1176,15 @@ export function ChatManager({
                       )}
                     </span>
                   </Button>
-                  
+
                   {isAttachMenuOpen && (
-                    <div 
+                    <div
                       className={cn("absolute bottom-[calc(100%+0.5rem)] left-0 bg-background/80 backdrop-blur-md border border-border/50 shadow-lg rounded-xl p-1 z-50 flex flex-col min-w-[120px] animate-in fade-in zoom-in duration-200 origin-bottom-left", typeof inputSectionStyle.attachmentMenuStyles?.menuContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuContainerStyles : "")}
                       style={typeof inputSectionStyle.attachmentMenuStyles?.menuContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuContainerStyles : undefined}
                     >
                       {inputTypeList.includes('image') && (
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           className={cn("flex items-center gap-2.5 px-2.5 py-2 text-xs hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
                           style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
                           onClick={() => triggerFileInput('image/*')}
@@ -1206,8 +1196,8 @@ export function ChatManager({
                         </button>
                       )}
                       {inputTypeList.includes('document') && (
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           className={cn("flex items-center gap-2.5 px-2.5 py-2 text-xs hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
                           style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
                           onClick={() => triggerFileInput('.pdf,.doc,.docx,.txt,application/pdf,text/plain')}
@@ -1219,8 +1209,8 @@ export function ChatManager({
                         </button>
                       )}
                       {inputTypeList.includes('audio') && (
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           className={cn("flex items-center gap-2.5 px-2.5 py-2 text-xs hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
                           style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
                           onClick={() => triggerFileInput('audio/*')}
@@ -1232,8 +1222,8 @@ export function ChatManager({
                         </button>
                       )}
                       {inputTypeList.includes('video') && (
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           className={cn("flex items-center gap-2.5 px-2.5 py-2 text-xs hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
                           style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
                           onClick={() => triggerFileInput('video/*')}
@@ -1248,26 +1238,36 @@ export function ChatManager({
                   )}
                 </div>
               )}
-              <Textarea
-                ref={textareaRef}
-                value={input}
-                onChange={handleInputChange}
-                maxRows={5}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    if (input.trim()) {
-                      e.currentTarget.form?.requestSubmit();
-                    }
-                  }
-                }}
-                placeholder={labels.placeholder || "Type a message..."}
-                className={cn("flex-1 bg-foreground/5 border-transparent shadow-sm focus-visible:bg-transparent", typeof inputSectionStyle.inputStyle === 'string' ? inputSectionStyle.inputStyle : "")}
-                style={typeof inputSectionStyle.inputStyle === 'object' ? inputSectionStyle.inputStyle : undefined}
-                suppressHydrationWarning={true}
-                maxLength={maxInputCharacter}
-                {...inputProps as any}
-              />
+              <div 
+                className="flex-1 flex flex-col rounded-2xl overflow-hidden bg-foreground/5 focus-within:bg-transparent focus-within:ring-3 focus-within:ring-ring/30 focus-within:border-ring transition-[color,box-shadow,background-color] border border-transparent shadow-sm"
+                style={{ maxHeight: 140 }}
+              >
+                <OverlayScrollbarsComponent
+                  className="w-full flex-1 min-h-0"
+                  options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
+                  defer
+                >
+                  <Textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={handleInputChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (input.trim()) {
+                          e.currentTarget.form?.requestSubmit();
+                        }
+                      }
+                    }}
+                    placeholder={labels.placeholder || "Type a message..."}
+                    className={cn("w-full bg-transparent border-none shadow-none focus-visible:ring-0 focus-visible:border-transparent min-h-[44px] !max-h-none resize-none", typeof inputSectionStyle.inputStyle === 'string' ? inputSectionStyle.inputStyle : "")}
+                    style={typeof inputSectionStyle.inputStyle === 'object' ? inputSectionStyle.inputStyle : undefined}
+                    suppressHydrationWarning={true}
+                    maxLength={maxInputCharacter}
+                    {...inputProps as any}
+                  />
+                </OverlayScrollbarsComponent>
+              </div>
               {isLoading ? (
                 <Button
                   type="button"
@@ -1345,13 +1345,13 @@ export function ChatManager({
               <SheetClose render={<Button variant="ghost" size="icon-sm" className="h-8 w-8"><A2UICollapseIcon size={16} /></Button>} />
             )}
           </SheetHeader>
-            <OverlayScrollbarsComponent
-              className="flex-1 p-4 relative"
-              options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
-              defer
-            >
-              <A2UICanvas />
-            </OverlayScrollbarsComponent>
+          <OverlayScrollbarsComponent
+            className="flex-1 p-4 relative"
+            options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
+            defer
+          >
+            <A2UICanvas />
+          </OverlayScrollbarsComponent>
         </div>
       </SheetContent>
     </Sheet>
@@ -1393,12 +1393,12 @@ export function ChatManager({
 
   const previewDialog = (
     <Dialog open={!!selectedPreviewFile} onOpenChange={(open) => !open && setSelectedPreviewFile(null)}>
-      <DialogContent 
+      <DialogContent
         className={cn("max-w-4xl w-[95vw] md:w-full max-h-[90vh] p-0 border-none bg-black/95 text-white flex flex-col overflow-hidden shadow-2xl", typeof inputSectionStyle.attachmentMenuStyles?.previewDialogContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.previewDialogContainerStyles : "")}
         style={typeof inputSectionStyle.attachmentMenuStyles?.previewDialogContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.previewDialogContainerStyles : undefined}
       >
         <DialogTitle className="sr-only">Preview Attachment</DialogTitle>
-        <div 
+        <div
           className={cn("flex-1 overflow-auto flex items-center justify-center p-4", typeof inputSectionStyle.attachmentMenuStyles?.previewDialogMediaStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.previewDialogMediaStyles : "")}
           style={typeof inputSectionStyle.attachmentMenuStyles?.previewDialogMediaStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.previewDialogMediaStyles : undefined}
         >
