@@ -327,7 +327,11 @@ import { User, Bot } from 'lucide-react';
       userMessageStyles: {
         alignment: "right", // Align left, right, or center
         bubbleStyle: "bg-blue-600 text-white shadow-md rounded-2xl px-4 py-3",
-        containerStyle: "mt-2"
+        containerStyle: "mt-2",
+        attachmentPreviewStyles: {
+          containerStyle: "mt-2",
+          itemStyle: "border-blue-400 bg-blue-700/50"
+        }
       },
       assistantMessageStyles: {
         alignment: "left", // Defaults to left, but can be overridden to center or right

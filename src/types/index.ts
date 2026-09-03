@@ -193,6 +193,10 @@ export interface MessageContentStyles {
   bubbleStyle?: React.CSSProperties | string;
   alignment?: 'left' | 'right' | 'center';
   badgeStyle?: BadgeStyles | string;
+  attachmentPreviewStyles?: {
+    containerStyle?: React.CSSProperties | string;
+    itemStyle?: React.CSSProperties | string;
+  };
 }
 
 export interface AssistantMessageContentStyles extends MessageContentStyles {
@@ -263,6 +267,8 @@ export interface InputStyles {
     menuItemIconStyles?: React.CSSProperties | string;
     previewContainerStyles?: React.CSSProperties | string;
     previewItemContainerStyles?: React.CSSProperties | string;
+    previewDialogContainerStyles?: React.CSSProperties | string;
+    previewDialogMediaStyles?: React.CSSProperties | string;
   };
   containerStyle?: React.CSSProperties | string;
   backgroundStyle?: React.CSSProperties | string;
@@ -291,7 +297,15 @@ export interface PromptChipStyles {
   promptChipHoverTextStyle?: React.CSSProperties | string;
 }
 
+export interface SkeletonStyles {
+  containerStyle?: React.CSSProperties | string;
+  headerStyle?: React.CSSProperties | string;
+  messageStyle?: React.CSSProperties | string;
+  inputStyle?: React.CSSProperties | string;
+}
+
 export interface ChatManagerComponentStyles {
+  skeletonStyles?: SkeletonStyles;
   messageStyle?: MessageStyles;
   inputSectionStyle?: InputStyles;
   headerStyle?: HeaderStyles;

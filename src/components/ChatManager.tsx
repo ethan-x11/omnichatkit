@@ -108,6 +108,7 @@ export function ChatManager({
     messageStyle = {},
     inputSectionStyle = {},
     headerStyle = {},
+    skeletonStyles = {},
     scrollButtonStyles = {},
     backgroundStyle: globalBackgroundStyle
   } = chatManagerComponentStyles;
@@ -161,6 +162,7 @@ export function ChatManager({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const [selectedMimeTypeFilter, setSelectedMimeTypeFilter] = useState<string>('*/*');
+  const [selectedPreviewFile, setSelectedPreviewFile] = useState<{ type: string; file: File; base64: string } | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -326,7 +328,8 @@ export function ChatManager({
           source: {
             type: 'data',
             value: base64Value,
-            mimeType: af.type
+            mimeType: af.type,
+            name: af.file.name
           }
         });
       });
@@ -420,18 +423,27 @@ export function ChatManager({
     }
     return (
       <div
-        className={cn(`flex border rounded-xl flex-col relative ${chatContainerClass} ${sizeClass}`, typeof globalBackgroundStyle === 'string' ? globalBackgroundStyle : "", className)}
-        style={{ ...(typeof globalBackgroundStyle === 'object' ? globalBackgroundStyle : {}), ...combinedStyle }}
+        className={cn(`flex border rounded-xl flex-col relative ${chatContainerClass} ${sizeClass}`, typeof skeletonStyles.containerStyle === 'string' ? skeletonStyles.containerStyle : (typeof globalBackgroundStyle === 'string' ? globalBackgroundStyle : ""), className)}
+        style={{ ...(typeof skeletonStyles.containerStyle === 'object' ? skeletonStyles.containerStyle : (typeof globalBackgroundStyle === 'object' ? globalBackgroundStyle : {})), ...combinedStyle }}
       >
-        <div className="p-4 border-b flex items-center justify-between">
+        <div 
+          className={cn("p-4 border-b flex items-center justify-between", typeof skeletonStyles.headerStyle === 'string' ? skeletonStyles.headerStyle : "")}
+          style={typeof skeletonStyles.headerStyle === 'object' ? skeletonStyles.headerStyle : undefined}
+        >
           <Skeleton className="h-6 w-32" />
         </div>
-        <div className="flex-1 p-6 space-y-6 flex flex-col justify-end">
+        <div 
+          className={cn("flex-1 p-6 space-y-6 flex flex-col justify-end", typeof skeletonStyles.messageStyle === 'string' ? skeletonStyles.messageStyle : "")}
+          style={typeof skeletonStyles.messageStyle === 'object' ? skeletonStyles.messageStyle : undefined}
+        >
           <Skeleton className="h-16 w-3/4 rounded-2xl self-end" />
           <Skeleton className="h-20 w-3/4 rounded-2xl self-start" />
           <Skeleton className="h-16 w-2/3 rounded-2xl self-end" />
         </div>
-        <div className="p-4 border-t">
+        <div 
+          className={cn("p-4 border-t", typeof skeletonStyles.inputStyle === 'string' ? skeletonStyles.inputStyle : "")}
+          style={typeof skeletonStyles.inputStyle === 'object' ? skeletonStyles.inputStyle : undefined}
+        >
           <Skeleton className="h-12 w-full rounded-md" />
         </div>
       </div>
@@ -500,8 +512,9 @@ export function ChatManager({
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Primary Chat Feed */}
-        <div className={`flex flex-col flex-1 h-full min-w-0 relative`}>
-          <div
+        <div className={`flex flex-col flex-1 h-full min-w-0`}>
+          <div className="relative flex-1 min-h-0 flex flex-col">
+            <div
             className={cn("flex-1 overflow-y-auto [scrollbar-gutter:stable] p-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent dark:[&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent dark:[&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
             style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
             onScroll={handleScroll}
@@ -610,6 +623,7 @@ export function ChatManager({
               let alignment: 'left' | 'right' | 'center' | undefined = undefined;
               let badgeStyleRaw: any = undefined;
               let subAgentBadgeStyleRaw: any = undefined;
+              let attachmentPreviewStylesRaw: any = undefined;
 
               if (typeof customStyleRaw === 'string') {
                 containerStyleClass = customStyleRaw;
@@ -625,6 +639,7 @@ export function ChatManager({
                   alignment = styleDef.alignment;
                   badgeStyleRaw = styleDef.badgeStyle;
                   subAgentBadgeStyleRaw = styleDef.subAgentBadgeStyle;
+                  attachmentPreviewStylesRaw = styleDef.attachmentPreviewStyles;
                 } else {
                   containerStyleObj = customStyleRaw as React.CSSProperties;
                 }
@@ -643,14 +658,14 @@ export function ChatManager({
 
               let thinkingContent = '';
               let mainContent: string = '';
-              let imageContents: any[] = [];
+              let mediaContents: any[] = [];
               let isActivity = (msg.role as string) === 'activity';
               let isDeveloper = (msg.role as string) === 'developer';
               let isReasoning = (msg.role as string) === 'reasoning';
 
               if (isUser && Array.isArray(msg.content)) {
                 mainContent = msg.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n\n');
-                imageContents = msg.content.filter((c: any) => c.type === 'image');
+                mediaContents = msg.content.filter((c: any) => c.type !== 'text');
               } else if (isReasoning) {
                 thinkingContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
               } else if (isActivity) {
@@ -773,9 +788,56 @@ export function ChatManager({
                           ...(alignment === 'left' ? { borderBottomLeftRadius: '4px' } : {})
                         }}
                       >
-                        {imageContents.map((img, i) => (
-                          <img key={i} src={img.source?.value} alt="User upload" className="max-w-full rounded-md mb-2 object-cover" />
-                        ))}
+                        {mediaContents.length > 0 && (
+                          <div 
+                            className={cn("flex flex-wrap gap-2 mb-2 w-full", typeof attachmentPreviewStylesRaw?.containerStyle === 'string' ? attachmentPreviewStylesRaw.containerStyle : "")}
+                            style={typeof attachmentPreviewStylesRaw?.containerStyle === 'object' ? attachmentPreviewStylesRaw.containerStyle : undefined}
+                          >
+                            {mediaContents.map((media, i) => {
+                              const dataUrl = `data:${media.source?.mimeType || 'application/octet-stream'};base64,${media.source?.value}`;
+                              const fileName = media.source?.name || 'Attachment';
+                              const isImage = media.type === 'image' || media.source?.mimeType?.startsWith('image/');
+                              const isVideo = media.type === 'video' || media.source?.mimeType?.startsWith('video/');
+                              const isAudio = media.type === 'audio' || media.source?.mimeType?.startsWith('audio/');
+                              
+                              return (
+                                <div 
+                                  key={i} 
+                                  className={cn("h-12 w-12 border rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex flex-col items-center justify-center relative cursor-pointer hover:opacity-80 transition-opacity shrink-0", typeof attachmentPreviewStylesRaw?.itemStyle === 'string' ? attachmentPreviewStylesRaw.itemStyle : "")}
+                                  style={typeof attachmentPreviewStylesRaw?.itemStyle === 'object' ? attachmentPreviewStylesRaw.itemStyle : undefined}
+                                  onClick={() => {
+                                    if (media.type === 'document' && media.source?.mimeType === 'application/pdf') {
+                                      // Can't easily use createObjectURL from base64 synchronously without Blob, so use data URL
+                                      const pdfWindow = window.open("");
+                                      if (pdfWindow) {
+                                        pdfWindow.document.write(`<iframe width='100%' height='100%' src='${dataUrl}'></iframe>`);
+                                      }
+                                    } else if (isImage || isVideo || isAudio || (media.type === 'document' && media.source?.mimeType?.startsWith('text/'))) {
+                                      setSelectedPreviewFile({
+                                        file: new File([new Blob()], fileName),
+                                        base64: dataUrl,
+                                        type: media.source?.mimeType || ''
+                                      });
+                                    }
+                                  }}
+                                >
+                                  {isImage ? (
+                                    <img src={dataUrl} className="h-full w-full object-cover" alt={fileName} />
+                                  ) : isVideo ? (
+                                    <Video size={18} className="text-zinc-500" />
+                                  ) : isAudio ? (
+                                    <Mic size={18} className="text-zinc-500" />
+                                  ) : (
+                                    <FileText size={18} className="text-zinc-500" />
+                                  )}
+                                  <div className="absolute bottom-0 inset-x-0 bg-black/50 text-[8px] text-white truncate px-1 text-center backdrop-blur-sm pb-0.5 leading-none pt-0.5">
+                                    {fileName}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                         <MarkdownRenderer
                           text={mainContent}
                         />
@@ -988,6 +1050,7 @@ export function ChatManager({
               </Button>
             </div>
           )}
+          </div>
 
           {promptChips?.promptChipList && promptChips.promptChipList.length > 0 && (promptChips.alwaysShow || messages.length === 0) && (
             <div
@@ -1023,7 +1086,7 @@ export function ChatManager({
           >
             {attachedFiles.length > 0 && (
               <div 
-                className={cn("flex gap-2 w-full overflow-x-auto pb-2 shrink-0", typeof inputSectionStyle.attachmentMenuStyles?.previewContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.previewContainerStyles : "")}
+                className={cn("flex gap-3 w-full overflow-x-auto pb-2 pt-2 px-2 shrink-0", typeof inputSectionStyle.attachmentMenuStyles?.previewContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.previewContainerStyles : "")}
                 style={typeof inputSectionStyle.attachmentMenuStyles?.previewContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.previewContainerStyles : undefined}
               >
                 {attachedFiles.map((file, idx) => (
@@ -1032,14 +1095,21 @@ export function ChatManager({
                       type="button" 
                       variant="destructive" 
                       size="icon" 
-                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full z-10 hidden group-hover:flex"
+                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full z-10 flex items-center justify-center shadow-sm"
                       onClick={() => removeAttachedFile(idx)}
                     >
                       <X size={12} />
                     </Button>
                     <div 
-                      className={cn("h-16 w-16 border rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex flex-col items-center justify-center relative", typeof inputSectionStyle.attachmentMenuStyles?.previewItemContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.previewItemContainerStyles : "")}
+                      className={cn("h-16 w-16 border rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex flex-col items-center justify-center relative cursor-pointer hover:opacity-80 transition-opacity", typeof inputSectionStyle.attachmentMenuStyles?.previewItemContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.previewItemContainerStyles : "")}
                       style={typeof inputSectionStyle.attachmentMenuStyles?.previewItemContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.previewItemContainerStyles : undefined}
+                      onClick={() => {
+                        if (file.type === 'application/pdf') {
+                          window.open(URL.createObjectURL(file.file), '_blank');
+                        } else if (file.type.startsWith('image/') || file.type.startsWith('audio/') || file.type.startsWith('video/') || file.type.startsWith('text/')) {
+                          setSelectedPreviewFile(file);
+                        }
+                      }}
                     >
                       {file.type.startsWith('image/') ? (
                         <img src={file.base64} className="h-full w-full object-cover" alt="Preview" />
@@ -1094,7 +1164,7 @@ export function ChatManager({
                       {inputTypeList.includes('image') && (
                         <button 
                           type="button" 
-                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-[13px] hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
+                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-xs hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
                           style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
                           onClick={() => triggerFileInput('image/*')}
                         >
@@ -1107,7 +1177,7 @@ export function ChatManager({
                       {inputTypeList.includes('document') && (
                         <button 
                           type="button" 
-                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-[13px] hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
+                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-xs hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
                           style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
                           onClick={() => triggerFileInput('.pdf,.doc,.docx,.txt,application/pdf,text/plain')}
                         >
@@ -1120,7 +1190,7 @@ export function ChatManager({
                       {inputTypeList.includes('audio') && (
                         <button 
                           type="button" 
-                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-[13px] hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
+                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-xs hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
                           style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
                           onClick={() => triggerFileInput('audio/*')}
                         >
@@ -1133,7 +1203,7 @@ export function ChatManager({
                       {inputTypeList.includes('video') && (
                         <button 
                           type="button" 
-                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-[13px] hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
+                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-xs hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
                           style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
                           onClick={() => triggerFileInput('video/*')}
                         >
@@ -1284,12 +1354,41 @@ export function ChatManager({
     </Button>
   );
 
+  const previewDialog = (
+    <Dialog open={!!selectedPreviewFile} onOpenChange={(open) => !open && setSelectedPreviewFile(null)}>
+      <DialogContent 
+        className={cn("max-w-4xl w-[95vw] md:w-full max-h-[90vh] p-0 border-none bg-black/95 text-white flex flex-col overflow-hidden shadow-2xl", typeof inputSectionStyle.attachmentMenuStyles?.previewDialogContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.previewDialogContainerStyles : "")}
+        style={typeof inputSectionStyle.attachmentMenuStyles?.previewDialogContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.previewDialogContainerStyles : undefined}
+      >
+        <DialogTitle className="sr-only">Preview Attachment</DialogTitle>
+        <div 
+          className={cn("flex-1 overflow-auto flex items-center justify-center p-4", typeof inputSectionStyle.attachmentMenuStyles?.previewDialogMediaStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.previewDialogMediaStyles : "")}
+          style={typeof inputSectionStyle.attachmentMenuStyles?.previewDialogMediaStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.previewDialogMediaStyles : undefined}
+        >
+          {selectedPreviewFile?.type.startsWith('image/') && (
+            <img src={selectedPreviewFile.base64} className="max-w-full max-h-[85vh] object-contain" alt="Preview" />
+          )}
+          {selectedPreviewFile?.type.startsWith('video/') && (
+            <video src={selectedPreviewFile.base64} controls autoPlay className="max-w-full max-h-[85vh]" />
+          )}
+          {selectedPreviewFile?.type.startsWith('audio/') && (
+            <audio src={selectedPreviewFile.base64} controls autoPlay className="w-full max-w-md" />
+          )}
+          {selectedPreviewFile?.type.startsWith('text/') && (
+            <iframe src={selectedPreviewFile.base64} className="w-full h-[85vh] bg-white rounded-md border-none" />
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (isEmbedded || (!isSheet && !isFloating)) {
     if (isEmbeddedCollapsible && !isOpen) {
       return (
         <>
           {renderToggleButton()}
           {a2uiSheetContent}
+          {previewDialog}
         </>
       );
     }
@@ -1298,6 +1397,7 @@ export function ChatManager({
       <>
         {innerContent}
         {a2uiSheetContent}
+        {previewDialog}
       </>
     );
   }
@@ -1341,6 +1441,7 @@ export function ChatManager({
           </DialogContent>
         </Dialog>
         {a2uiSheetContent}
+        {previewDialog}
       </>
     );
   }
@@ -1356,6 +1457,7 @@ export function ChatManager({
         </SheetContent>
       </Sheet>
       {a2uiSheetContent}
+      {previewDialog}
     </>
   );
 }
