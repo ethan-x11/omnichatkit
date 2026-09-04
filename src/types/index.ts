@@ -486,7 +486,7 @@ export interface SessionManagerComponentStyles {
 /**
  * Properties for configuring the SessionManager component.
  */
-export interface SessionManagerProps {
+export interface SessionManagerBaseProps {
   /** Interval in milliseconds to sync sessions from the API. */
   syncInterval?: number;
   /** Main title for the session manager. */
@@ -497,12 +497,6 @@ export interface SessionManagerProps {
   style?: React.CSSProperties;
   /** The position of the drawer or inline sidebar. */
   position?: ComponentPosition; 
-  /** 
-   * If true or 'sheet', acts as a slide-out drawer. 
-   * If 'inline', acts as a collapsible sidebar. 
-   * If false, acts as a static container.
-   */
-  collapsible?: boolean | 'inline' | 'sheet'; 
   /** Callback fired when a session is selected. */
   onSessionSelect?: (sessionId: string) => void;
   /** Callback fired when creating a new session. */
@@ -510,6 +504,40 @@ export interface SessionManagerProps {
   /** Advanced custom styling for internal components. */
   sessionManagerComponentStyles?: SessionManagerComponentStyles;
 }
+
+/**
+ * Properties for configuring the SessionManager component.
+ */
+export type SessionManagerProps = SessionManagerBaseProps & (
+  | {
+      /** 
+       * If true, the session manager can be collapsed.
+       * How it collapses depends on the `variant` prop.
+       */
+      collapsible?: true;
+      /**
+       * The visual style of the session manager.
+       * - 'sheet': A slide-out panel (Sheet).
+       * - 'drawer': A swipeable panel (Drawer).
+       * - 'inline-sheet': A collapsible sidebar with Sheet styling.
+       * - 'inline-drawer': A collapsible sidebar with Drawer styling.
+       * Default is 'inline-sheet'.
+       */
+      variant?: 'sheet' | 'inline-sheet' | 'drawer' | 'inline-drawer';
+    }
+  | {
+      /** 
+       * If true, the session manager can be collapsed.
+       * How it collapses depends on the `variant` prop.
+       */
+      collapsible: false;
+      /**
+       * The visual style of the session manager.
+       * When collapsible is false, only inline variants are allowed.
+       */
+      variant?: 'inline-sheet' | 'inline-drawer';
+    }
+);
 
 type OmniChatBaseProps = {
   theme?: ChatTheme;

@@ -385,8 +385,14 @@ Enable sessions on `OmniChat` (or either chat provider) before rendering it. Ses
 
 #### Props
 - **`sessionStorageMode`** (`"disabled" | "api" | "memory"`): Set on `OmniChat` or a chat provider. `"disabled"` is the default; `SessionManager` throws if it is rendered in this mode.
-- **`collapsible`** (`boolean`): Enables the drawer view for space-saving layouts.
-- **`position`** (`"left" | "right"`): Where the manager should dock.
+- **`collapsible`** (`boolean`): If true, allows the session manager to be collapsed.
+- **`variant`** (`"sheet" | "inline-sheet" | "drawer" | "inline-drawer"`): Controls the visual style and collapse behavior. Defaults to `"inline-sheet"`.
+  - `"sheet"`: A slide-out panel that overlays the content.
+  - `"drawer"`: A swipeable slide-out panel that overlays the content.
+  - `"inline-sheet"`: A collapsible sidebar with Sheet styling that stays in the page flow.
+  - `"inline-drawer"`: A collapsible sidebar with Drawer styling (rounded floating design) that stays in the page flow.
+  - *Note: If `collapsible` is `false`, only inline variants (`"inline-sheet"` or `"inline-drawer"`) are allowed.*
+- **`position`** (`"left" | "right" | "top" | "bottom"`): Where the manager should dock.
 
 #### Session list style slots
 

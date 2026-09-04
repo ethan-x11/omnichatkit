@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-react';
 import 'overlayscrollbars/overlayscrollbars.css';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerClose } from './ui/drawer';
 import { Dialog as SheetPrimitive } from '@base-ui/react/dialog';
 import { Button } from './ui/button';
 import { SessionManagerProps } from '../types';
@@ -81,7 +82,8 @@ export function SessionManager({
   className,
   style,
   position = 'left',
-  collapsible = true,
+  collapsible = false,
+  variant = 'inline-sheet',
   onSessionSelect,
   onNewSession,
   sessionManagerComponentStyles = {}
@@ -110,8 +112,14 @@ export function SessionManager({
     throw new Error('SessionManager requires sessionStorageMode to be "memory" or "api".');
   }
 
-  const isSheetCollapsible = collapsible === true || collapsible === 'sheet';
-  const isInlineCollapsible = collapsible === 'inline';
+  const isDrawerCollapsible = collapsible && (variant === 'drawer' || variant === 'inline-drawer');
+  const isPopoutCollapsible = collapsible && (variant === 'drawer' || variant === 'sheet');
+  const isInlineCollapsible = collapsible && (variant === 'inline-drawer' || variant === 'inline-sheet');
+
+  const isDrawerVariant = variant === 'drawer' || variant === 'inline-drawer';
+  const Header = isDrawerVariant ? DrawerHeader : SheetHeader;
+  const Title = isDrawerVariant ? DrawerTitle : SheetTitle;
+  const Close = isDrawerVariant ? DrawerClose : SheetClose;
 
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -263,11 +271,21 @@ export function SessionManager({
       position === 'top' ? ChevronDown : ChevronUp;
 
   if (isInlineCollapsible && isInlineCollapsed) {
+    const isInlineDrawer = variant === 'inline-drawer';
     const borderClass = position === 'right' ? 'border-l' :
       position === 'top' ? 'border-b' :
         position === 'bottom' ? 'border-t' : 'border-r';
     return (
-      <div className={cn(`flex flex-col h-full bg-background items-center py-4 ${borderClass}`, className)} style={{ width: '60px', minWidth: '60px', ...style }}>
+      <div 
+        className={cn(
+          "flex flex-col items-center py-4",
+          isInlineDrawer 
+            ? "h-[calc(100%-1rem)] m-2 rounded-3xl border border-border bg-popover text-popover-foreground shadow-lg" 
+            : `h-full bg-background ${borderClass}`,
+          className
+        )} 
+        style={{ width: '60px', minWidth: '60px', ...style }}
+      >
         <Button variant="ghost" size="icon" onClick={() => setIsInlineCollapsed(false)} title="Expand Sessions">
           <ExpandIcon size={20} />
         </Button>
@@ -276,13 +294,23 @@ export function SessionManager({
   }
 
   if (!isHydrated) {
-    if (isSheetCollapsible) return null;
+    if (isPopoutCollapsible) return null;
     if (isInlineCollapsible && isInlineCollapsed) {
+      const isInlineDrawer = variant === 'inline-drawer';
       const borderClass = position === 'right' ? 'border-l' :
         position === 'top' ? 'border-b' :
           position === 'bottom' ? 'border-t' : 'border-r';
       return (
-        <div className={cn(`flex flex-col h-full bg-background items-center py-4 ${borderClass}`, className)} style={{ width: '60px', minWidth: '60px', ...style }}>
+        <div 
+          className={cn(
+            "flex flex-col items-center py-4",
+            isInlineDrawer 
+              ? "h-[calc(100%-1rem)] m-2 rounded-3xl border border-border bg-popover text-popover-foreground shadow-lg" 
+              : `h-full bg-background ${borderClass}`,
+            className
+          )} 
+          style={{ width: '60px', minWidth: '60px', ...style }}
+        >
           <Skeleton className="h-8 w-8 rounded-md" />
         </div>
       );
@@ -309,23 +337,32 @@ export function SessionManager({
   }
 
   const innerContent = (
-    <div className={cn("flex flex-col h-full bg-background", className)} style={style}>
-      <SheetHeader className="p-4 border-b flex flex-row items-center justify-between">
-        {isSheetCollapsible && (position === 'right' || position === 'bottom') && (
-          <SheetClose render={<Button variant="ghost" size="icon-sm" className="h-8 w-8"><CollapseIcon size={16} /></Button>} />
+    <div 
+      className={cn(
+        "flex flex-col",
+        variant === 'inline-drawer' 
+          ? "h-[calc(100%-1rem)] m-2 rounded-3xl border border-border bg-popover text-popover-foreground shadow-lg overflow-hidden" 
+          : "h-full bg-background",
+        className
+      )} 
+      style={style}
+    >
+      <Header className="p-4 border-b flex flex-row items-center justify-between">
+        {isPopoutCollapsible && (position === 'right' || position === 'bottom') && (
+          <Close render={<Button variant="ghost" size="icon-sm" className="h-8 w-8"><CollapseIcon size={16} /></Button>} />
         )}
         {isInlineCollapsible && (position === 'right' || position === 'bottom') && (
           <Button variant="ghost" size="icon-sm" className="h-8 w-8" onClick={() => setIsInlineCollapsed(true)}>
             <CollapseIcon size={16} />
           </Button>
         )}
-        {isSheetCollapsible ? (
-          <SheetTitle
+        {isPopoutCollapsible ? (
+          <Title
             className={cn("flex-1", typeof titleStyle === 'string' ? titleStyle : "")}
             style={typeof titleStyle === 'object' ? titleStyle : undefined}
           >
             {label}
-          </SheetTitle>
+          </Title>
         ) : (
           <div
             className={cn("font-heading text-base font-medium text-foreground flex-1", typeof titleStyle === 'string' ? titleStyle : "")}
@@ -334,15 +371,15 @@ export function SessionManager({
             {label}
           </div>
         )}
-        {isSheetCollapsible && (position === 'left' || position === 'top') && (
-          <SheetClose render={<Button variant="ghost" size="icon-sm" className="h-8 w-8" suppressHydrationWarning={true}><CollapseIcon size={16} /></Button>} />
+        {isPopoutCollapsible && (position === 'left' || position === 'top') && (
+          <Close render={<Button variant="ghost" size="icon-sm" className="h-8 w-8" suppressHydrationWarning={true}><CollapseIcon size={16} /></Button>} />
         )}
         {isInlineCollapsible && (position === 'left' || position === 'top') && (
           <Button variant="ghost" size="icon-sm" className="h-8 w-8" onClick={() => setIsInlineCollapsed(true)} suppressHydrationWarning={true}>
             <CollapseIcon size={16} />
           </Button>
         )}
-      </SheetHeader>
+      </Header>
 
       <div className="p-4 border-b">
         <Button
@@ -570,8 +607,31 @@ export function SessionManager({
     </div>
   );
 
-  if (!isSheetCollapsible) {
+  if (!isPopoutCollapsible) {
     return innerContent;
+  }
+
+  if (variant === 'drawer') {
+    const swipeDirection = position === 'right' ? 'right' : position === 'left' ? 'left' : position === 'top' ? 'up' : 'down';
+    
+    return (
+      <Drawer open={isOpen} onOpenChange={setIsOpen} modal={false} swipeDirection={swipeDirection}>
+        <DrawerTrigger
+          render={
+            <Button variant="outline" className="gap-2">
+              <MessageSquare size={16} /> {label}
+            </Button>
+          }
+        />
+        <DrawerContent
+          className={cn(
+            "w-[300px] sm:w-[400px] p-0"
+          )}
+        >
+          {innerContent}
+        </DrawerContent>
+      </Drawer>
+    );
   }
 
   return (
