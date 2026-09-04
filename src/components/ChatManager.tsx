@@ -12,7 +12,8 @@ import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from './ui/sheet';
 import { Skeleton } from './ui/skeleton';
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from './ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogPortal } from './ui/dialog';
+import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { MessageCircle, PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, Copy, Check, Square, Brain, Wrench, Activity, AlertCircle, PlayCircle, CheckCircle2, User, Bot, ArrowDown, Plus, X, Image as ImageIcon, FileText, Video, Mic, Paperclip, Send } from 'lucide-react';
 import { cn } from 'cn';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -1468,13 +1469,30 @@ export function ChatManager({
           <DialogTrigger
             render={renderToggleButton(isOpen)}
           />
-          <DialogContent
-            className="flex flex-col overflow-hidden max-w-[90vw] md:max-w-[800px] w-full h-[85vh] p-0 border-none bg-transparent shadow-none"
-            showCloseButton={true}
-            style={getFloatingDialogStyle(collapseToggleButtonPosition)}
-          >
-            {innerContent}
-          </DialogContent>
+          <DialogPortal>
+            <DialogPrimitive.Popup
+              className={cn(
+                "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-4xl bg-popover p-6 text-sm text-popover-foreground shadow-xl ring-1 ring-foreground/5 duration-100 outline-none sm:max-w-md dark:ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+                "flex flex-col overflow-hidden max-w-[90vw] md:max-w-[800px] w-full h-[85vh] p-0 border-none bg-transparent shadow-none"
+              )}
+              style={getFloatingDialogStyle(collapseToggleButtonPosition)}
+            >
+              {innerContent}
+              <DialogPrimitive.Close
+                data-slot="dialog-close"
+                render={
+                  <Button
+                    variant="ghost"
+                    className="absolute top-4 right-4 bg-secondary"
+                    size="icon-sm"
+                  />
+                }
+              >
+                <X size={16} />
+                <span className="sr-only">Close</span>
+              </DialogPrimitive.Close>
+            </DialogPrimitive.Popup>
+          </DialogPortal>
         </Dialog>
         {a2uiSheetContent}
         {previewDialog}
