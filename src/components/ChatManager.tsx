@@ -14,9 +14,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose 
 import { Skeleton } from './ui/skeleton';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogPortal } from './ui/dialog';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
+import { Marker, MarkerContent, MarkerIcon } from './ui/marker';
 import { MessageCircle, PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, Copy, Check, Square, Brain, Wrench, Activity, AlertCircle, PlayCircle, CheckCircle2, User, Bot, ArrowDown, Plus, X, Image as ImageIcon, FileText, Video, Mic, Paperclip, Send } from 'lucide-react';
 import { cn } from 'cn';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { Message, MessageHeader, MessageContent, MessageFooter } from './ui/message';
 
 const renderBadge = (
   text: string | React.ReactNode,
@@ -611,18 +613,17 @@ export function ChatManager({
                 if ((msg.role as string) === 'system') {
                   if (msg.content === 'Response Stopped') {
                     return (
-                      <div
+                      <Marker
                         key={msg.id}
+                        variant="separator"
                         className={cn(
-                          "mb-4 flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400",
+                          "mb-4",
                           typeof messageStyle.stopResponseStyle === 'string' ? messageStyle.stopResponseStyle : ""
                         )}
                         style={typeof messageStyle.stopResponseStyle === 'object' ? messageStyle.stopResponseStyle : undefined}
                       >
-                        <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
-                        <span className="shrink-0 font-medium">Response Stopped</span>
-                        <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
-                      </div>
+                        <MarkerContent>Response Stopped</MarkerContent>
+                      </Marker>
                     );
                   }
 
@@ -739,9 +740,10 @@ export function ChatManager({
                 }
 
                 return (
-                  <div key={msg.id} className={cn("mb-4 group relative w-full", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
+                  <Message key={msg.id} className={cn("mb-4", containerStyleClass)} style={containerStyleObj} align={alignment === 'right' ? 'end' : 'start'}>
+                    <MessageContent className={cn(alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass)}>
                     {(mainContent || thinkingContent || (!thinkingContent && !hasTool)) && (
-                      <div className="font-bold mb-2 flex items-center gap-2 min-w-0 max-w-full">
+                      <MessageHeader className="font-bold mb-2 px-0 flex items-center gap-2 min-w-0 max-w-full">
                         {isUser ? (
                           renderBadge(labels.userLabel ?? 'You', badgeStyleRaw, "flex items-center gap-1", "", <User size={14} />)
                         ) : isDeveloper ? (
@@ -759,7 +761,7 @@ export function ChatManager({
                           </>
                         )}
 
-                      </div>
+                      </MessageHeader>
                     )}
 
                     {showReasoning && thinkingContent && (() => {
@@ -864,9 +866,8 @@ export function ChatManager({
                             text={mainContent}
                           />
                         </div>
-                        <div className={cn(
-                          "opacity-0 group-hover:opacity-100 transition-opacity flex mt-1",
-                          alignment === 'right' ? 'justify-end' : 'justify-start'
+                        <MessageFooter className={cn(
+                          "opacity-0 group-hover:opacity-100 transition-opacity mt-1"
                         )}>
                           <Button
                             variant="ghost"
@@ -877,7 +878,7 @@ export function ChatManager({
                           >
                             {copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
                           </Button>
-                        </div>
+                        </MessageFooter>
                       </div>
                     ) : null}
 
@@ -902,97 +903,104 @@ export function ChatManager({
                           const resStyles = tcStyles.responseDataStyles || {};
 
                           return (
-                            <details
+                            <Marker
                               key={tool.toolCallId}
-                              className={cn("group [&_summary::-webkit-details-marker]:hidden mb-2", typeof tcStyles.containerStyle === 'string' ? tcStyles.containerStyle : "")}
+                              className={cn("mb-2 items-start", typeof tcStyles.containerStyle === 'string' ? tcStyles.containerStyle : "")}
                               style={typeof tcStyles.containerStyle === 'object' ? tcStyles.containerStyle : {}}
                             >
-                              <summary className="flex items-center justify-between cursor-pointer list-none p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-md border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800/50">
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={typeof headerStyles.iconStyles?.iconStyle === 'string' ? headerStyles.iconStyles.iconStyle : ""}
-                                    style={typeof headerStyles.iconStyles?.iconStyle === 'object' ? headerStyles.iconStyles.iconStyle : {}}
-                                  >
-                                    {headerStyles.iconStyles?.icon || <Wrench size={14} />}
-                                  </span>
-                                  <span className="flex items-center">
-                                    <span
-                                      className={typeof headerStyles.titleStyles?.titleStyle === 'string' ? headerStyles.titleStyles.titleStyle : ""}
-                                      style={typeof headerStyles.titleStyles?.titleStyle === 'object' ? headerStyles.titleStyles.titleStyle : {}}
-                                    >
-                                      Tool Call:
-                                    </span>
-                                    <span
-                                      className={cn("ml-1", typeof headerStyles.titleStyles?.toolNameStyle === 'string' ? headerStyles.titleStyles.toolNameStyle : "")}
-                                      style={typeof headerStyles.titleStyles?.toolNameStyle === 'object' ? headerStyles.titleStyles.toolNameStyle : {}}
-                                    >
-                                      {tool.toolName}
-                                    </span>
-                                    {messageToAgentMap.get(tool.toolCallId) && renderBadge(
-                                      messageToAgentMap.get(tool.toolCallId) as string,
-                                      subAgentBadgeStyleRaw,
-                                      "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1 ml-2",
-                                      "text-zinc-700 dark:text-zinc-300",
-                                      <Bot size={12} />
-                                    )}
-                                  </span>
-                                </div>
-                                <ChevronDown size={14} className="transition-transform duration-200 group-open:rotate-180 opacity-50" />
-                              </summary>
-                              <div className="p-3 border border-t-0 border-zinc-200 dark:border-zinc-800 rounded-b-md bg-zinc-50/50 dark:bg-zinc-900/25 -mt-2 pt-4">
-                                {reqStyles.titleStyle || reqStyles.icon ? (
-                                  <div className="font-medium mb-1 flex items-center gap-1">
-                                    <span
-                                      className={typeof reqStyles.iconStyle === 'string' ? reqStyles.iconStyle : ""}
-                                      style={typeof reqStyles.iconStyle === 'object' ? reqStyles.iconStyle : {}}
-                                    >
-                                      {reqStyles.icon}
-                                    </span>
-                                    <span
-                                      className={typeof reqStyles.titleStyle === 'string' ? reqStyles.titleStyle : ""}
-                                      style={typeof reqStyles.titleStyle === 'object' ? reqStyles.titleStyle : {}}
-                                    >
-                                      Request
-                                    </span>
-                                  </div>
-                                ) : null}
-                                <div
-                                  className={cn("overflow-x-auto rounded-md text-xs", typeof reqStyles.dataStyle === 'string' ? reqStyles.dataStyle : "")}
-                                  style={typeof reqStyles.dataStyle === 'object' ? reqStyles.dataStyle : {}}
+                              <MarkerIcon className="mt-0.5">
+                                <span
+                                  className={typeof headerStyles.iconStyles?.iconStyle === 'string' ? headerStyles.iconStyles.iconStyle : ""}
+                                  style={typeof headerStyles.iconStyles?.iconStyle === 'object' ? headerStyles.iconStyles.iconStyle : {}}
                                 >
-                                  <MarkdownRenderer text={`\`\`\`json\n${typeof tool.args === 'string' ? tool.args : JSON.stringify(tool.args, null, 2)}\n\`\`\``} />
-                                </div>
-                                {tool.result && (
-                                  <div className="mt-2 bg-green-50 dark:bg-green-950/30 rounded p-2 text-xs border border-green-100 dark:border-green-900">
-                                    <div className="text-green-600 dark:text-green-400 font-medium mb-1 flex items-center gap-1">
-                                      <span
-                                        className={typeof resStyles.iconStyle === 'string' ? resStyles.iconStyle : ""}
-                                        style={typeof resStyles.iconStyle === 'object' ? resStyles.iconStyle : {}}
-                                      >
-                                        {resStyles.icon || <CheckCircle2 size={12} />}
-                                      </span>
-                                      <span
-                                        className={typeof resStyles.titleStyle === 'string' ? resStyles.titleStyle : ""}
-                                        style={typeof resStyles.titleStyle === 'object' ? resStyles.titleStyle : {}}
-                                      >
-                                        Result
+                                  {headerStyles.iconStyles?.icon || <Wrench size={14} />}
+                                </span>
+                              </MarkerIcon>
+                              <MarkerContent>
+                                <details className="group [&_summary::-webkit-details-marker]:hidden w-full">
+                                  <summary className="flex items-center justify-between cursor-pointer list-none font-medium text-sm transition-colors text-zinc-700 dark:text-zinc-300">
+                                    <div className="flex items-center gap-2">
+                                      <span className="flex items-center">
+                                        <span
+                                          className={typeof headerStyles.titleStyles?.titleStyle === 'string' ? headerStyles.titleStyles.titleStyle : ""}
+                                          style={typeof headerStyles.titleStyles?.titleStyle === 'object' ? headerStyles.titleStyles.titleStyle : {}}
+                                        >
+                                          Tool Call:
+                                        </span>
+                                        <span
+                                          className={cn("ml-1", typeof headerStyles.titleStyles?.toolNameStyle === 'string' ? headerStyles.titleStyles.toolNameStyle : "")}
+                                          style={typeof headerStyles.titleStyles?.toolNameStyle === 'object' ? headerStyles.titleStyles.toolNameStyle : {}}
+                                        >
+                                          {tool.toolName}
+                                        </span>
+                                        {messageToAgentMap.get(tool.toolCallId) && renderBadge(
+                                          messageToAgentMap.get(tool.toolCallId) as string,
+                                          subAgentBadgeStyleRaw,
+                                          "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1 ml-2",
+                                          "text-zinc-700 dark:text-zinc-300",
+                                          <Bot size={12} />
+                                        )}
                                       </span>
                                     </div>
+                                    <ChevronDown size={14} className="transition-transform duration-200 group-open:rotate-180 opacity-50" />
+                                  </summary>
+                                  <div className="mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                                    {reqStyles.titleStyle || reqStyles.icon ? (
+                                      <div className="font-medium mb-1 flex items-center gap-1">
+                                        <span
+                                          className={typeof reqStyles.iconStyle === 'string' ? reqStyles.iconStyle : ""}
+                                          style={typeof reqStyles.iconStyle === 'object' ? reqStyles.iconStyle : {}}
+                                        >
+                                          {reqStyles.icon}
+                                        </span>
+                                        <span
+                                          className={typeof reqStyles.titleStyle === 'string' ? reqStyles.titleStyle : ""}
+                                          style={typeof reqStyles.titleStyle === 'object' ? reqStyles.titleStyle : {}}
+                                        >
+                                          Request
+                                        </span>
+                                      </div>
+                                    ) : null}
                                     <div
-                                      className={cn("overflow-x-auto rounded-md text-xs [&_.prose]:text-zinc-700 dark:[&_.prose]:text-zinc-300", typeof resStyles.dataStyle === 'string' ? resStyles.dataStyle : "")}
-                                      style={typeof resStyles.dataStyle === 'object' ? resStyles.dataStyle : {}}
+                                      className={cn("overflow-x-auto rounded-md text-xs", typeof reqStyles.dataStyle === 'string' ? reqStyles.dataStyle : "")}
+                                      style={typeof reqStyles.dataStyle === 'object' ? reqStyles.dataStyle : {}}
                                     >
-                                      <MarkdownRenderer text={`\`\`\`json\n${typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)}\n\`\`\``} />
+                                      <MarkdownRenderer text={`\`\`\`json\n${typeof tool.args === 'string' ? tool.args : JSON.stringify(tool.args, null, 2)}\n\`\`\``} />
                                     </div>
+                                    {tool.result && (
+                                      <div className="mt-2 bg-green-50 dark:bg-green-950/30 rounded p-2 text-xs border border-green-100 dark:border-green-900">
+                                        <div className="text-green-600 dark:text-green-400 font-medium mb-1 flex items-center gap-1">
+                                          <span
+                                            className={typeof resStyles.iconStyle === 'string' ? resStyles.iconStyle : ""}
+                                            style={typeof resStyles.iconStyle === 'object' ? resStyles.iconStyle : {}}
+                                          >
+                                            {resStyles.icon || <CheckCircle2 size={12} />}
+                                          </span>
+                                          <span
+                                            className={typeof resStyles.titleStyle === 'string' ? resStyles.titleStyle : ""}
+                                            style={typeof resStyles.titleStyle === 'object' ? resStyles.titleStyle : {}}
+                                          >
+                                            Result
+                                          </span>
+                                        </div>
+                                        <div
+                                          className={cn("overflow-x-auto rounded-md text-xs [&_.prose]:text-zinc-700 dark:[&_.prose]:text-zinc-300", typeof resStyles.dataStyle === 'string' ? resStyles.dataStyle : "")}
+                                          style={typeof resStyles.dataStyle === 'object' ? resStyles.dataStyle : {}}
+                                        >
+                                          <MarkdownRenderer text={`\`\`\`json\n${typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)}\n\`\`\``} />
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                            </details>
+                                </details>
+                              </MarkerContent>
+                            </Marker>
                           );
                         })}
                       </div>
                     )}
-                  </div>
+                    </MessageContent>
+                  </Message>
                 );
               })}
 
@@ -1015,6 +1023,19 @@ export function ChatManager({
                   );
                 }
 
+                // const abortError = events.find((e: any) => {
+                //   if (e.type !== 'RUN_ERROR' && e.type !== 'RunError') return false;
+                //   const msg = String(e.message).toLowerCase();
+                //   return msg.includes('aborted') || msg.includes('abort');
+                // });
+                // if (abortError) {
+                //   return (
+                //     <Marker variant="separator" className="mb-4">
+                //       <MarkerContent>Response Stopped</MarkerContent>
+                //     </Marker>
+                //   );
+                // }
+
                 if (isLoading) {
                   // Find the latest step event
                   const stepEvents = events.filter((e: any) => e.type === 'STEP_STARTED' || e.type === 'StepStarted' || e.type === 'STEP_FINISHED' || e.type === 'StepFinished');
@@ -1027,23 +1048,22 @@ export function ChatManager({
                   const thTitleStyle = tStyles.titleStyle;
 
                   return (
-                    <div
-                      className={cn("text-sm text-zinc-500 animate-pulse flex items-center gap-2", typeof thContainerStyle === 'string' ? thContainerStyle : "")}
+                    <Marker
+                      className={cn(typeof thContainerStyle === 'string' ? thContainerStyle : "")}
                       style={typeof thContainerStyle === 'object' ? thContainerStyle : undefined}
                     >
-                      <span
-                        className={typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : ""}
-                        style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
-                      >
-                        {thIconStyles.icon || <PlayCircle size={14} className="animate-spin" />}
-                      </span>
-                      <span
-                        className={typeof thTitleStyle === 'string' ? thTitleStyle : ""}
-                        style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}
-                      >
+                      <MarkerIcon>
+                        <span
+                          className={typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : ""}
+                          style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
+                        >
+                          {thIconStyles.icon || <PlayCircle size={14} className="animate-spin" />}
+                        </span>
+                      </MarkerIcon>
+                      <MarkerContent className={cn("shimmer", typeof thTitleStyle === 'string' ? thTitleStyle : "")} style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}>
                         {activeStepName ? `Executing step: ${activeStepName}...` : 'AI is thinking...'}
-                      </span>
-                    </div>
+                      </MarkerContent>
+                    </Marker>
                   );
                 }
                 return null;
