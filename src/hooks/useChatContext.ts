@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { AIChatContext } from '../components/AIChatProvider';
 import { AGUIChatContext } from '../components/AGUIChatProvider';
 import { useAIChatStore } from '../store/useAIChatStore';

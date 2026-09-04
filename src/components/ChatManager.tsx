@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose 
 import { Skeleton } from './ui/skeleton';
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from './ui/dialog';
 import { MessageCircle, PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, Copy, Check, Square, Brain, Wrench, Activity, AlertCircle, PlayCircle, CheckCircle2, User, Bot, ArrowDown, Plus, X, Image as ImageIcon, FileText, Video, Mic, Paperclip, Send } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from 'cn';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
 const renderBadge = (
@@ -1238,7 +1238,7 @@ export function ChatManager({
                   )}
                 </div>
               )}
-              <div 
+              <div
                 className="flex-1 flex flex-col rounded-2xl overflow-hidden bg-foreground/5 focus-within:bg-transparent focus-within:ring-3 focus-within:ring-ring/30 focus-within:border-ring transition-[color,box-shadow,background-color] border border-transparent shadow-sm"
                 style={{ maxHeight: 140 }}
               >

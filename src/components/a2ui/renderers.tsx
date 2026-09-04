@@ -1,6 +1,4 @@
 "use client";
-
-import { clsx } from "clsx";
 import { type ReactNode, useState } from "react";
 import {
   Bar,
@@ -51,6 +49,7 @@ import { Label as UILabel } from "@/components/ui/label";
 import { Slider as UISlider } from "@/components/ui/slider";
 import { ToggleGroup as UIToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { clsx } from "cn";
 
 /* The runtime walks `{path}` bindings against the data model before
  * handing props to renderers, so every prop value below is post-resolution. */

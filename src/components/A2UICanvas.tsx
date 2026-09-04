@@ -9,7 +9,7 @@ import { catalog as preBuiltCustomCatalog } from './a2ui';
 import { surfaceBus, type A2UIOp } from './a2ui/surface-bus';
 import { A2UICanvasProps } from '../types';
 import { useAIChatStore } from '../store/useAIChatStore';
-import { cn } from '@/lib/utils';
+import { cn } from 'cn';
 
 // ---------------------------------------------------------------------------
 // Types for the in-memory surface state
@@ -334,11 +334,11 @@ export function A2UICanvas({ emptyState, className, style }: A2UICanvasProps = {
         if ('updateComponents' in op || 'updateDataModel' in op) {
           setSurfaces((prev) => {
             if (prev.length === 0) return prev;
-            
-            const targetId = ('updateComponents' in op) 
-              ? (op.updateComponents as any).surfaceId 
+
+            const targetId = ('updateComponents' in op)
+              ? (op.updateComponents as any).surfaceId
               : (op.updateDataModel as any).surfaceId;
-            
+
             if (targetId) {
               return prev.map(s => s.surfaceId === targetId ? applyOp(s, op) : s);
             } else {

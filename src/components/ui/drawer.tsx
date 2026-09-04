@@ -2,8 +2,7 @@
 
 import * as React from "react"
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer"
-
-import { cn } from "@/lib/utils"
+import { cn } from "cn"
 
 type DrawerContextProps = {
   hasSnapPoints: boolean
@@ -192,7 +191,7 @@ function DrawerTitle({ className, ...props }: DrawerPrimitive.Title.Props) {
     <DrawerPrimitive.Title
       data-slot="drawer-title"
       className={cn(
-        "font-heading text-base font-medium text-foreground",
+        "text-base font-medium text-foreground",
         className
       )}
       {...props}

@@ -9,7 +9,7 @@ import { useAIChatStore } from '../store/useAIChatStore';
 import { AIChatContext } from './AIChatProvider';
 import { AGUIChatContext } from './AGUIChatProvider';
 import { PanelLeftClose, PanelRightClose, ChevronDown, ChevronUp, MessageSquarePlus, Trash2, MessageSquare, Pin, PinOff, Pencil, Check, X, MoreHorizontal } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from 'cn';
 import { SheetClose } from './ui/sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
@@ -74,8 +74,8 @@ const formatRelativeTime = (value: Date | string, now: number) => {
  * @param props - Configuration and styling options for the session list.
  * @returns A rendered session manager UI component.
  */
-export function SessionManager({ 
-  label = "Sessions", 
+export function SessionManager({
+  label = "Sessions",
   recentLabel = "Recent Conversations",
   className,
   style,
@@ -94,7 +94,7 @@ export function SessionManager({
   const aiContext = React.useContext(AIChatContext);
   const aguiContext = React.useContext(AGUIChatContext);
   const context = aiContext || aguiContext;
-  
+
   const [isOpen, setIsOpen] = useState(false);
   const [isInlineCollapsed, setIsInlineCollapsed] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -108,7 +108,7 @@ export function SessionManager({
   if (configuredSessionStorageMode === 'disabled') {
     throw new Error('SessionManager requires sessionStorageMode to be "memory" or "api".');
   }
-  
+
   const isSheetCollapsible = collapsible === true || collapsible === 'sheet';
   const isInlineCollapsible = collapsible === 'inline';
 
@@ -156,7 +156,7 @@ export function SessionManager({
         console.error('Failed to load the initial session:', error);
       }
     };
-    
+
     loadInitialSession();
     // We explicitly only want this to run once on mount!
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -181,7 +181,7 @@ export function SessionManager({
     if (context && context.stop) {
       context.stop();
     }
-    
+
     let sessionToLoad;
     try {
       sessionToLoad = await getSession(id);
@@ -253,22 +253,22 @@ export function SessionManager({
     setHoveredSessionId((currentId) => currentId === id ? null : currentId);
   };
 
-  const CollapseIcon = position === 'right' ? PanelRightClose : 
-                       position === 'left' ? PanelLeftClose :
-                       position === 'top' ? ChevronUp : ChevronDown;
-                       
-  const ExpandIcon = position === 'right' ? PanelLeftClose : 
-                     position === 'left' ? PanelRightClose :
-                     position === 'top' ? ChevronDown : ChevronUp;
+  const CollapseIcon = position === 'right' ? PanelRightClose :
+    position === 'left' ? PanelLeftClose :
+      position === 'top' ? ChevronUp : ChevronDown;
+
+  const ExpandIcon = position === 'right' ? PanelLeftClose :
+    position === 'left' ? PanelRightClose :
+      position === 'top' ? ChevronDown : ChevronUp;
 
   if (isInlineCollapsible && isInlineCollapsed) {
-    const borderClass = position === 'right' ? 'border-l' : 
-                        position === 'top' ? 'border-b' :
-                        position === 'bottom' ? 'border-t' : 'border-r';
+    const borderClass = position === 'right' ? 'border-l' :
+      position === 'top' ? 'border-b' :
+        position === 'bottom' ? 'border-t' : 'border-r';
     return (
       <div className={cn(`flex flex-col h-full bg-background items-center py-4 ${borderClass}`, className)} style={{ width: '60px', minWidth: '60px', ...style }}>
         <Button variant="ghost" size="icon" onClick={() => setIsInlineCollapsed(false)} title="Expand Sessions">
-           <ExpandIcon size={20} />
+          <ExpandIcon size={20} />
         </Button>
       </div>
     );
@@ -277,9 +277,9 @@ export function SessionManager({
   if (!isHydrated) {
     if (isSheetCollapsible) return null;
     if (isInlineCollapsible && isInlineCollapsed) {
-      const borderClass = position === 'right' ? 'border-l' : 
-                          position === 'top' ? 'border-b' :
-                          position === 'bottom' ? 'border-t' : 'border-r';
+      const borderClass = position === 'right' ? 'border-l' :
+        position === 'top' ? 'border-b' :
+          position === 'bottom' ? 'border-t' : 'border-r';
       return (
         <div className={cn(`flex flex-col h-full bg-background items-center py-4 ${borderClass}`, className)} style={{ width: '60px', minWidth: '60px', ...style }}>
           <Skeleton className="h-8 w-8 rounded-md" />
@@ -294,7 +294,7 @@ export function SessionManager({
         <div className="p-4 border-b">
           <Skeleton className="h-10 w-full rounded-md" />
         </div>
-        <OverlayScrollbarsComponent 
+        <OverlayScrollbarsComponent
           className="flex-1 p-4 space-y-4"
           options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
           defer
@@ -319,14 +319,14 @@ export function SessionManager({
           </Button>
         )}
         {isSheetCollapsible ? (
-          <SheetTitle 
+          <SheetTitle
             className={cn("flex-1", typeof titleStyle === 'string' ? titleStyle : "")}
             style={typeof titleStyle === 'object' ? titleStyle : undefined}
           >
             {label}
           </SheetTitle>
         ) : (
-          <div 
+          <div
             className={cn("font-heading text-base font-medium text-foreground flex-1", typeof titleStyle === 'string' ? titleStyle : "")}
             style={typeof titleStyle === 'object' ? titleStyle : undefined}
           >
@@ -342,31 +342,31 @@ export function SessionManager({
           </Button>
         )}
       </SheetHeader>
-      
+
       <div className="p-4 border-b">
-        <Button 
-          onClick={handleNewSession} 
-          className={cn("w-full justify-start gap-2", typeof newConversationButtonStyles.newConversationButtonStyle === 'string' ? newConversationButtonStyles.newConversationButtonStyle : "")} 
+        <Button
+          onClick={handleNewSession}
+          className={cn("w-full justify-start gap-2", typeof newConversationButtonStyles.newConversationButtonStyle === 'string' ? newConversationButtonStyles.newConversationButtonStyle : "")}
           style={typeof newConversationButtonStyles.newConversationButtonStyle === 'object' ? newConversationButtonStyles.newConversationButtonStyle : undefined}
-          variant="default" 
+          variant="default"
           disabled={!context?.messages || context.messages.length === 0}
           suppressHydrationWarning={true}
         >
-           <MessageSquarePlus 
-             size={16} 
-             className={typeof newConversationButtonStyles.newConversationButtonIconStyle === 'string' ? newConversationButtonStyles.newConversationButtonIconStyle : ""}
-             style={typeof newConversationButtonStyles.newConversationButtonIconStyle === 'object' ? newConversationButtonStyles.newConversationButtonIconStyle : undefined}
-           /> 
-           <span
-             className={typeof newConversationButtonStyles.newConversationButtonTextStyle === 'string' ? newConversationButtonStyles.newConversationButtonTextStyle : ""}
-             style={typeof newConversationButtonStyles.newConversationButtonTextStyle === 'object' ? newConversationButtonStyles.newConversationButtonTextStyle : undefined}
-           >
-             New Conversation
-           </span>
+          <MessageSquarePlus
+            size={16}
+            className={typeof newConversationButtonStyles.newConversationButtonIconStyle === 'string' ? newConversationButtonStyles.newConversationButtonIconStyle : ""}
+            style={typeof newConversationButtonStyles.newConversationButtonIconStyle === 'object' ? newConversationButtonStyles.newConversationButtonIconStyle : undefined}
+          />
+          <span
+            className={typeof newConversationButtonStyles.newConversationButtonTextStyle === 'string' ? newConversationButtonStyles.newConversationButtonTextStyle : ""}
+            style={typeof newConversationButtonStyles.newConversationButtonTextStyle === 'object' ? newConversationButtonStyles.newConversationButtonTextStyle : undefined}
+          >
+            New Conversation
+          </span>
         </Button>
       </div>
 
-      <OverlayScrollbarsComponent 
+      <OverlayScrollbarsComponent
         className="flex-1 p-2"
         options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
         defer
@@ -376,8 +376,8 @@ export function SessionManager({
         </div>
         <div className="flex flex-col gap-1 mt-1">
           {sessions.map(s => (
-            <div 
-              key={s.id} 
+            <div
+              key={s.id}
               className={cn(`group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors hover:bg-muted ${activeSessionId === s.id ? 'bg-muted font-medium' : ''}`, typeof listStyle?.containerStyle === 'string' ? listStyle.containerStyle : "")}
               style={typeof listStyle?.containerStyle === 'object' ? listStyle.containerStyle : undefined}
               onClick={() => handleSessionSelect(s.id)}
@@ -443,7 +443,7 @@ export function SessionManager({
                   {s.metadata?.isPinned && <Pin size={13} className="shrink-0 text-muted-foreground" aria-label="Pinned" />}
                 </div>
               )}
-              
+
               <div
                 className={cn("items-center", (hoveredSessionId === s.id || openSessionMenuId === s.id) ? "flex" : "hidden")}
                 onClick={(e) => e.stopPropagation()}
@@ -451,10 +451,10 @@ export function SessionManager({
                 <Button
                   variant="ghost"
                   size="icon"
-                className="h-7 w-7 text-muted-foreground"
-                title={s.metadata?.isPinned ? 'Unpin conversation' : 'Pin conversation'}
-                onClick={() => void handlePinToggle(s.id, Boolean(s.metadata?.isPinned))}
-              >
+                  className="h-7 w-7 text-muted-foreground"
+                  title={s.metadata?.isPinned ? 'Unpin conversation' : 'Pin conversation'}
+                  onClick={() => void handlePinToggle(s.id, Boolean(s.metadata?.isPinned))}
+                >
                   {renderStyledIcon(
                     listStyle?.listItemPinButtonStyles?.icon,
                     s.metadata?.isPinned ? <PinOff size={14} /> : <Pin size={14} />,
@@ -575,7 +575,7 @@ export function SessionManager({
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger 
+      <SheetTrigger
         render={
           <Button variant="outline" className="gap-2">
             <MessageSquare size={16} /> {label}
