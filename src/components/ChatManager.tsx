@@ -521,7 +521,7 @@ export function ChatManager({
                   className={cn("flex-1 p-4", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
                   style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
                 >
-                  <MessageScrollerContent>
+                  <MessageScrollerContent className='gap-0'>
               {messages.length === 0 && welcomeScreen && (
                 <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
                   {typeof welcomeScreen === 'boolean' ? (
