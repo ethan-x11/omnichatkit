@@ -1,3 +1,4 @@
+import './global.css';
 export * from './types';
 export * from './store/useAIChatStore';
 export { AIChatContext, useAIChatContext, type UseChatHelpers } from './components/AIChatProvider';

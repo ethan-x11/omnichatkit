@@ -49,11 +49,15 @@
         "types": "./dist/server/index.d.cts",
         "default": "./dist/server/index.cjs"
       }
-    }
+    },
+    "./dist/style.css": "./dist/style.css",
+    "./style.css": "./dist/style.css"
   },
+  "style": "./dist/style.css",
   "files": [
     "dist"
   ],
+  "sideEffects": false,
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",

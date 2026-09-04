@@ -516,554 +516,554 @@ export function ChatManager({
         <div className={`flex flex-col flex-1 h-full min-w-0`}>
           <div className="relative flex-1 min-h-0 flex flex-col">
             <MessageScrollerProvider autoScroll={autoScroll} defaultScrollPosition="last-anchor">
-              <MessageScroller className="flex-1 h-full min-w-0">
+              <MessageScroller className="flex-1 h-full min-w-0 bg-transparent">
                 <MessageScrollerViewport
                   className={cn("flex-1 p-4", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
                   style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
                 >
                   <MessageScrollerContent className='gap-0'>
-              {messages.length === 0 && welcomeScreen && (
-                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
-                  {typeof welcomeScreen === 'boolean' ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <MessageCircle size={48} className="opacity-20" />
-                      <h3 className="text-lg font-medium text-foreground">Welcome to OmniChat</h3>
-                      <p>Start a conversation below to get help or generate dynamic UI components.</p>
-                    </div>
-                  ) : React.isValidElement(welcomeScreen) ? (
-                    welcomeScreen
-                  ) : typeof welcomeScreen === 'function' ? (
-                    React.createElement(welcomeScreen as React.FC<any>)
-                  ) : (
-                    welcomeScreen as React.ReactNode
-                  )}
-                </div>
-              )}
-              {messages.map((msg: any) => {
-                // Prefer parts (new API) over toolInvocations (deprecated). Fall back for AG-UI
-                // messages that are not Vercel AI SDK messages and won't have parts.
-                const toolParts = (msg.parts ?? []).filter((p: any) => p.type === 'tool-invocation');
-                const toolInvocations: any[] = toolParts.length > 0
-                  ? toolParts.map((p: any) => p.toolInvocation)
-                  : ((msg as any).toolInvocations ?? []);
-                const hasTool = toolInvocations.length > 0;
-
-                if ((msg.role as string) === 'reasoning') {
-                  return (
-                    <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
-                      <details className="mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group">
-                        <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
-                          <Brain size={14} className="animate-pulse" />
-                          <span>Reasoning</span>
-                          <ChevronDown size={14} className="ml-auto transition-transform group-open:rotate-180" />
-                        </summary>
-                        <div className="text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-2">{msg.content}</div>
-                      </details>
-                    </MessageScrollerItem>
-                  );
-                }
-
-                if ((msg.role as string) === 'activity') {
-                  return (
-                    <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
-                      <div className="mb-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 text-sm border border-blue-100 dark:border-blue-900">
-                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1 font-medium">
-                          <Activity size={14} />
-                          <span>Activity Update</span>
-                        </div>
-                        <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
-                          {msg.content}
-                        </div>
-                      </div>
-                    </MessageScrollerItem>
-                  );
-                }
-
-                if ((msg.role as string) === 'tool') {
-                  return (
-                    <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
-                      <div className="mb-4 bg-green-50 dark:bg-green-950/30 rounded-lg p-3 text-sm border border-green-100 dark:border-green-900">
-                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1 font-medium">
-                          <CheckCircle2 size={14} />
-                          <span>Tool Result</span>
-                        </div>
-                        <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
-                          {msg.content}
-                        </div>
-                      </div>
-                    </MessageScrollerItem>
-                  );
-                }
-
-                if ((msg.role as string) === 'system') {
-                  if (msg.content === 'Response Stopped') {
-                    return (
-                      <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
-                        <Marker
-                          variant="separator"
-                          className={cn(
-                            "mb-4",
-                            typeof messageStyle.stopResponseStyle === 'string' ? messageStyle.stopResponseStyle : ""
-                          )}
-                          style={typeof messageStyle.stopResponseStyle === 'object' ? messageStyle.stopResponseStyle : undefined}
-                        >
-                          <MarkerContent>Response Stopped</MarkerContent>
-                        </Marker>
-                      </MessageScrollerItem>
-                    );
-                  }
-
-                  return (
-                    <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
-                      <div className="mb-4 bg-zinc-100 dark:bg-zinc-900/50 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800">
-                        <div className="text-zinc-600 dark:text-zinc-400">
-                          {msg.content}
-                        </div>
-                      </div>
-                    </MessageScrollerItem>
-                  );
-                }
-
-                const isUser = msg.role === 'user';
-                const customStyleRaw = isUser ? messageStyle.userMessageStyles : messageStyle.assistantMessageStyles;
-
-                let containerStyleClass = '';
-                let containerStyleObj: React.CSSProperties | undefined = undefined;
-                let bubbleStyleClass = '';
-                let bubbleStyleObj: React.CSSProperties | undefined = undefined;
-                let alignment: 'left' | 'right' | 'center' | undefined = undefined;
-                let badgeStyleRaw: any = undefined;
-                let subAgentBadgeStyleRaw: any = undefined;
-                let attachmentPreviewStylesRaw: any = undefined;
-
-                if (typeof customStyleRaw === 'string') {
-                  containerStyleClass = customStyleRaw;
-                } else if (typeof customStyleRaw === 'object' && customStyleRaw !== null) {
-                  if ('containerStyle' in customStyleRaw || 'bubbleStyle' in customStyleRaw || 'alignment' in customStyleRaw || 'badgeStyle' in customStyleRaw || 'subAgentBadgeStyle' in customStyleRaw) {
-                    const styleDef = customStyleRaw as any;
-                    containerStyleClass = typeof styleDef.containerStyle === 'string' ? styleDef.containerStyle : '';
-                    containerStyleObj = typeof styleDef.containerStyle === 'object' ? styleDef.containerStyle : undefined;
-
-                    bubbleStyleClass = typeof styleDef.bubbleStyle === 'string' ? styleDef.bubbleStyle : '';
-                    bubbleStyleObj = typeof styleDef.bubbleStyle === 'object' ? styleDef.bubbleStyle : undefined;
-
-                    alignment = styleDef.alignment;
-                    badgeStyleRaw = styleDef.badgeStyle;
-                    subAgentBadgeStyleRaw = styleDef.subAgentBadgeStyle;
-                    attachmentPreviewStylesRaw = styleDef.attachmentPreviewStyles;
-                  } else {
-                    containerStyleObj = customStyleRaw as React.CSSProperties;
-                  }
-                }
-
-                if (isUser) {
-                  if (!bubbleStyleClass && !bubbleStyleObj) {
-                    bubbleStyleClass = "bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 text-foreground shadow-sm dark:shadow-zinc-700/50 rounded-2xl px-4 py-2";
-                  }
-                  if (!alignment) alignment = 'right';
-                } else {
-                  if (!alignment) alignment = 'left';
-                }
-
-                const alignmentClass = alignment === 'left' ? 'flex flex-col items-start' : (alignment === 'right' ? 'flex flex-col items-end' : 'flex flex-col items-center text-left whitespace-normal');
-
-                let thinkingContent = '';
-                let mainContent: string = '';
-                let mediaContents: any[] = [];
-                let isActivity = (msg.role as string) === 'activity';
-                let isDeveloper = (msg.role as string) === 'developer';
-                let isReasoning = (msg.role as string) === 'reasoning';
-
-                if (isUser && Array.isArray(msg.content)) {
-                  mainContent = msg.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n\n');
-                  mediaContents = msg.content.filter((c: any) => c.type !== 'text');
-                } else if (isReasoning) {
-                  thinkingContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-                } else if (isActivity) {
-                  mainContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content, null, 2);
-                } else if (typeof msg.content === 'string') {
-                  mainContent = msg.content;
-                } else {
-                  mainContent = msg.content ? JSON.stringify(msg.content) : '';
-                }
-
-                if (!isUser && !isReasoning && !isActivity && !isDeveloper && typeof mainContent === 'string') {
-                  const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|<think\/>)/i;
-                  const match = mainContent.match(thinkRegex);
-                  if (match) {
-                    thinkingContent = match[1].trim();
-                    mainContent = mainContent.replace(match[0], '').trim();
-                  } else {
-                    if (mainContent.includes('<think>')) {
-                      const parts = mainContent.split('<think>');
-                      mainContent = parts[0].trim();
-                      thinkingContent = parts[1].trim();
-                    } else if (mainContent.includes('</think>') || mainContent.includes('<think/>')) {
-                      const closeTag = mainContent.includes('</think>') ? '</think>' : '<think/>';
-                      const parts = mainContent.split(closeTag);
-                      thinkingContent = parts[0].replace(/<think>/i, '').trim();
-                      mainContent = parts.slice(1).join(closeTag).trim();
-                    }
-                  }
-                }
-
-                if (isActivity) {
-                  const actStyles = (messageStyle as any).activityMessageStyles || {};
-                  const actContainerStyleClass = typeof actStyles === 'string' ? actStyles : (typeof actStyles.containerStyle === 'string' ? actStyles.containerStyle : "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg px-4 py-3 text-sm border border-blue-100 dark:border-blue-800 w-full");
-                  const actContainerStyleObj = typeof actStyles === 'object' && typeof actStyles.containerStyle === 'object' ? actStyles.containerStyle : {};
-
-                  return (
-                    <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
-                      <div className={cn("mb-4 group relative w-full flex flex-col", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
-                        <div className={actContainerStyleClass} style={actContainerStyleObj}>
-                          <div className="flex items-center gap-2 font-medium mb-1">
-                            <Activity size={14} />
-                            {(msg as any).activityType || 'Activity'}
+                    {messages.length === 0 && welcomeScreen && (
+                      <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
+                        {typeof welcomeScreen === 'boolean' ? (
+                          <div className="flex flex-col items-center gap-2">
+                            <MessageCircle size={48} className="opacity-20" />
+                            <h3 className="text-lg font-medium text-foreground">Welcome to OmniChat</h3>
+                            <p>Start a conversation below to get help or generate dynamic UI components.</p>
                           </div>
-                          <pre className="text-xs overflow-x-auto p-2 bg-white/50 dark:bg-black/20 rounded">
-                            {mainContent}
-                          </pre>
-                        </div>
-                      </div>
-                    </MessageScrollerItem>
-                  );
-                }
-
-                return (
-                  <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
-                    <Message className={cn("mb-4", containerStyleClass)} style={containerStyleObj} align={alignment === 'right' ? 'end' : 'start'}>
-                      <MessageContent className={cn(alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass)}>
-                    {(mainContent || thinkingContent || (!thinkingContent && !hasTool)) && (
-                      <MessageHeader className="font-bold mb-2 px-0 flex items-center gap-2 min-w-0 max-w-full">
-                        {isUser ? (
-                          renderBadge(labels.userLabel ?? 'You', badgeStyleRaw, "flex items-center gap-1", "", <User size={14} />)
-                        ) : isDeveloper ? (
-                          renderBadge('Developer', (messageStyle as any).developerMessageStyles?.badgeStyle || badgeStyleRaw, "flex items-center gap-1", "", <Wrench size={14} />)
+                        ) : React.isValidElement(welcomeScreen) ? (
+                          welcomeScreen
+                        ) : typeof welcomeScreen === 'function' ? (
+                          React.createElement(welcomeScreen as React.FC<any>)
                         ) : (
-                          <>
-                            {renderBadge(labels.assistantLabel ?? 'AI', badgeStyleRaw, "flex items-center gap-1", "", <Bot size={14} />)}
-                            {messageToAgentMap.get(msg.id) && renderBadge(
-                              messageToAgentMap.get(msg.id) as string,
-                              subAgentBadgeStyleRaw,
-                              "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1",
-                              "text-zinc-700 dark:text-zinc-300",
-                              <Bot size={12} />
-                            )}
-                          </>
+                          welcomeScreen as React.ReactNode
                         )}
-
-                      </MessageHeader>
+                      </div>
                     )}
+                    {messages.map((msg: any) => {
+                      // Prefer parts (new API) over toolInvocations (deprecated). Fall back for AG-UI
+                      // messages that are not Vercel AI SDK messages and won't have parts.
+                      const toolParts = (msg.parts ?? []).filter((p: any) => p.type === 'tool-invocation');
+                      const toolInvocations: any[] = toolParts.length > 0
+                        ? toolParts.map((p: any) => p.toolInvocation)
+                        : ((msg as any).toolInvocations ?? []);
+                      const hasTool = toolInvocations.length > 0;
 
-                    {showReasoning && thinkingContent && (() => {
-                      const tStyles = messageStyle.thinkingStepStyles || {};
-                      const thContainerStyle = tStyles.containerStyle;
-                      const thIconStyles = tStyles.iconStyles || {};
-                      const thTitleStyle = tStyles.titleStyle;
-                      const thDataStyle = tStyles.dataStyle;
+                      if ((msg.role as string) === 'reasoning') {
+                        return (
+                          <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                            <details className="mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group">
+                              <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
+                                <Brain size={14} className="animate-pulse" />
+                                <span>Reasoning</span>
+                                <ChevronDown size={14} className="ml-auto transition-transform group-open:rotate-180" />
+                              </summary>
+                              <div className="text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-2">{msg.content}</div>
+                            </details>
+                          </MessageScrollerItem>
+                        );
+                      }
+
+                      if ((msg.role as string) === 'activity') {
+                        return (
+                          <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                            <div className="mb-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 text-sm border border-blue-100 dark:border-blue-900">
+                              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1 font-medium">
+                                <Activity size={14} />
+                                <span>Activity Update</span>
+                              </div>
+                              <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
+                                {msg.content}
+                              </div>
+                            </div>
+                          </MessageScrollerItem>
+                        );
+                      }
+
+                      if ((msg.role as string) === 'tool') {
+                        return (
+                          <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                            <div className="mb-4 bg-green-50 dark:bg-green-950/30 rounded-lg p-3 text-sm border border-green-100 dark:border-green-900">
+                              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1 font-medium">
+                                <CheckCircle2 size={14} />
+                                <span>Tool Result</span>
+                              </div>
+                              <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
+                                {msg.content}
+                              </div>
+                            </div>
+                          </MessageScrollerItem>
+                        );
+                      }
+
+                      if ((msg.role as string) === 'system') {
+                        if (msg.content === 'Response Stopped') {
+                          return (
+                            <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                              <Marker
+                                variant="separator"
+                                className={cn(
+                                  "mb-4",
+                                  typeof messageStyle.stopResponseStyle === 'string' ? messageStyle.stopResponseStyle : ""
+                                )}
+                                style={typeof messageStyle.stopResponseStyle === 'object' ? messageStyle.stopResponseStyle : undefined}
+                              >
+                                <MarkerContent>Response Stopped</MarkerContent>
+                              </Marker>
+                            </MessageScrollerItem>
+                          );
+                        }
+
+                        return (
+                          <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                            <div className="mb-4 bg-zinc-100 dark:bg-zinc-900/50 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800">
+                              <div className="text-zinc-600 dark:text-zinc-400">
+                                {msg.content}
+                              </div>
+                            </div>
+                          </MessageScrollerItem>
+                        );
+                      }
+
+                      const isUser = msg.role === 'user';
+                      const customStyleRaw = isUser ? messageStyle.userMessageStyles : messageStyle.assistantMessageStyles;
+
+                      let containerStyleClass = '';
+                      let containerStyleObj: React.CSSProperties | undefined = undefined;
+                      let bubbleStyleClass = '';
+                      let bubbleStyleObj: React.CSSProperties | undefined = undefined;
+                      let alignment: 'left' | 'right' | 'center' | undefined = undefined;
+                      let badgeStyleRaw: any = undefined;
+                      let subAgentBadgeStyleRaw: any = undefined;
+                      let attachmentPreviewStylesRaw: any = undefined;
+
+                      if (typeof customStyleRaw === 'string') {
+                        containerStyleClass = customStyleRaw;
+                      } else if (typeof customStyleRaw === 'object' && customStyleRaw !== null) {
+                        if ('containerStyle' in customStyleRaw || 'bubbleStyle' in customStyleRaw || 'alignment' in customStyleRaw || 'badgeStyle' in customStyleRaw || 'subAgentBadgeStyle' in customStyleRaw) {
+                          const styleDef = customStyleRaw as any;
+                          containerStyleClass = typeof styleDef.containerStyle === 'string' ? styleDef.containerStyle : '';
+                          containerStyleObj = typeof styleDef.containerStyle === 'object' ? styleDef.containerStyle : undefined;
+
+                          bubbleStyleClass = typeof styleDef.bubbleStyle === 'string' ? styleDef.bubbleStyle : '';
+                          bubbleStyleObj = typeof styleDef.bubbleStyle === 'object' ? styleDef.bubbleStyle : undefined;
+
+                          alignment = styleDef.alignment;
+                          badgeStyleRaw = styleDef.badgeStyle;
+                          subAgentBadgeStyleRaw = styleDef.subAgentBadgeStyle;
+                          attachmentPreviewStylesRaw = styleDef.attachmentPreviewStyles;
+                        } else {
+                          containerStyleObj = customStyleRaw as React.CSSProperties;
+                        }
+                      }
+
+                      if (isUser) {
+                        if (!bubbleStyleClass && !bubbleStyleObj) {
+                          bubbleStyleClass = "bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 text-foreground shadow-sm dark:shadow-zinc-700/50 rounded-2xl px-4 py-2";
+                        }
+                        if (!alignment) alignment = 'right';
+                      } else {
+                        if (!alignment) alignment = 'left';
+                      }
+
+                      const alignmentClass = alignment === 'left' ? 'flex flex-col items-start' : (alignment === 'right' ? 'flex flex-col items-end' : 'flex flex-col items-center text-left whitespace-normal');
+
+                      let thinkingContent = '';
+                      let mainContent: string = '';
+                      let mediaContents: any[] = [];
+                      let isActivity = (msg.role as string) === 'activity';
+                      let isDeveloper = (msg.role as string) === 'developer';
+                      let isReasoning = (msg.role as string) === 'reasoning';
+
+                      if (isUser && Array.isArray(msg.content)) {
+                        mainContent = msg.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n\n');
+                        mediaContents = msg.content.filter((c: any) => c.type !== 'text');
+                      } else if (isReasoning) {
+                        thinkingContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+                      } else if (isActivity) {
+                        mainContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content, null, 2);
+                      } else if (typeof msg.content === 'string') {
+                        mainContent = msg.content;
+                      } else {
+                        mainContent = msg.content ? JSON.stringify(msg.content) : '';
+                      }
+
+                      if (!isUser && !isReasoning && !isActivity && !isDeveloper && typeof mainContent === 'string') {
+                        const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|<think\/>)/i;
+                        const match = mainContent.match(thinkRegex);
+                        if (match) {
+                          thinkingContent = match[1].trim();
+                          mainContent = mainContent.replace(match[0], '').trim();
+                        } else {
+                          if (mainContent.includes('<think>')) {
+                            const parts = mainContent.split('<think>');
+                            mainContent = parts[0].trim();
+                            thinkingContent = parts[1].trim();
+                          } else if (mainContent.includes('</think>') || mainContent.includes('<think/>')) {
+                            const closeTag = mainContent.includes('</think>') ? '</think>' : '<think/>';
+                            const parts = mainContent.split(closeTag);
+                            thinkingContent = parts[0].replace(/<think>/i, '').trim();
+                            mainContent = parts.slice(1).join(closeTag).trim();
+                          }
+                        }
+                      }
+
+                      if (isActivity) {
+                        const actStyles = (messageStyle as any).activityMessageStyles || {};
+                        const actContainerStyleClass = typeof actStyles === 'string' ? actStyles : (typeof actStyles.containerStyle === 'string' ? actStyles.containerStyle : "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg px-4 py-3 text-sm border border-blue-100 dark:border-blue-800 w-full");
+                        const actContainerStyleObj = typeof actStyles === 'object' && typeof actStyles.containerStyle === 'object' ? actStyles.containerStyle : {};
+
+                        return (
+                          <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                            <div className={cn("mb-4 group relative w-full flex flex-col", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
+                              <div className={actContainerStyleClass} style={actContainerStyleObj}>
+                                <div className="flex items-center gap-2 font-medium mb-1">
+                                  <Activity size={14} />
+                                  {(msg as any).activityType || 'Activity'}
+                                </div>
+                                <pre className="text-xs overflow-x-auto p-2 bg-white/50 dark:bg-black/20 rounded">
+                                  {mainContent}
+                                </pre>
+                              </div>
+                            </div>
+                          </MessageScrollerItem>
+                        );
+                      }
 
                       return (
-                        <details
-                          className={cn("mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group/think", typeof thContainerStyle === 'string' ? thContainerStyle : "")}
-                          style={typeof thContainerStyle === 'object' ? thContainerStyle : {}}
-                        >
-                          <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
-                            <span
-                              className={cn(typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : "")}
-                              style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
-                            >
-                              {thIconStyles.icon || <Brain size={14} className="animate-pulse" />}
-                            </span>
-                            <span
-                              className={typeof thTitleStyle === 'string' ? thTitleStyle : ""}
-                              style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}
-                            >
-                              Reasoning
-                            </span>
-                            <ChevronDown size={14} className="ml-auto transition-transform group-open/think:rotate-180" />
-                          </summary>
-                          <div
-                            className={cn("mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-4", typeof thDataStyle === 'string' ? thDataStyle : "")}
-                            style={typeof thDataStyle === 'object' ? thDataStyle : {}}
-                          >
-                            <MarkdownRenderer text={thinkingContent} className="text-zinc-600 dark:text-zinc-400" />
-                          </div>
-                        </details>
-                      );
-                    })()}
+                        <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                          <Message className={cn("mb-4", containerStyleClass)} style={containerStyleObj} align={alignment === 'right' ? 'end' : 'start'}>
+                            <MessageContent className={cn(alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass)}>
+                              {(mainContent || thinkingContent || (!thinkingContent && !hasTool)) && (
+                                <MessageHeader className="font-bold mb-2 px-0 flex items-center gap-2 min-w-0 max-w-full">
+                                  {isUser ? (
+                                    renderBadge(labels.userLabel ?? 'You', badgeStyleRaw, "flex items-center gap-1", "", <User size={14} />)
+                                  ) : isDeveloper ? (
+                                    renderBadge('Developer', (messageStyle as any).developerMessageStyles?.badgeStyle || badgeStyleRaw, "flex items-center gap-1", "", <Wrench size={14} />)
+                                  ) : (
+                                    <>
+                                      {renderBadge(labels.assistantLabel ?? 'AI', badgeStyleRaw, "flex items-center gap-1", "", <Bot size={14} />)}
+                                      {messageToAgentMap.get(msg.id) && renderBadge(
+                                        messageToAgentMap.get(msg.id) as string,
+                                        subAgentBadgeStyleRaw,
+                                        "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1",
+                                        "text-zinc-700 dark:text-zinc-300",
+                                        <Bot size={12} />
+                                      )}
+                                    </>
+                                  )}
 
+                                </MessageHeader>
+                              )}
 
-                    {(mainContent || (!thinkingContent && !hasTool)) ? (
-                      <div className="mt-1 flex flex-col relative min-w-0 max-w-full">
-                        <div
-                          className={cn("relative z-10 break-words min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass, isDeveloper ? "font-mono text-sm" : "")}
-                          style={{
-                            ...bubbleStyleObj,
-                            ...(alignment === 'right' ? { borderBottomRightRadius: '4px' } : {}),
-                            ...(alignment === 'left' ? { borderBottomLeftRadius: '4px' } : {})
-                          }}
-                        >
-                          {mediaContents.length > 0 && (
-                            <div
-                              className={cn("flex flex-wrap gap-2 mb-2 w-full", typeof attachmentPreviewStylesRaw?.containerStyle === 'string' ? attachmentPreviewStylesRaw.containerStyle : "")}
-                              style={typeof attachmentPreviewStylesRaw?.containerStyle === 'object' ? attachmentPreviewStylesRaw.containerStyle : undefined}
-                            >
-                              {mediaContents.map((media, i) => {
-                                const dataUrl = `data:${media.source?.mimeType || 'application/octet-stream'};base64,${media.source?.value}`;
-                                const fileName = media.source?.name || 'Attachment';
-                                const isImage = media.type === 'image' || media.source?.mimeType?.startsWith('image/');
-                                const isVideo = media.type === 'video' || media.source?.mimeType?.startsWith('video/');
-                                const isAudio = media.type === 'audio' || media.source?.mimeType?.startsWith('audio/');
+                              {showReasoning && thinkingContent && (() => {
+                                const tStyles = messageStyle.thinkingStepStyles || {};
+                                const thContainerStyle = tStyles.containerStyle;
+                                const thIconStyles = tStyles.iconStyles || {};
+                                const thTitleStyle = tStyles.titleStyle;
+                                const thDataStyle = tStyles.dataStyle;
 
                                 return (
+                                  <details
+                                    className={cn("mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group/think", typeof thContainerStyle === 'string' ? thContainerStyle : "")}
+                                    style={typeof thContainerStyle === 'object' ? thContainerStyle : {}}
+                                  >
+                                    <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
+                                      <span
+                                        className={cn(typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : "")}
+                                        style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
+                                      >
+                                        {thIconStyles.icon || <Brain size={14} className="animate-pulse" />}
+                                      </span>
+                                      <span
+                                        className={typeof thTitleStyle === 'string' ? thTitleStyle : ""}
+                                        style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}
+                                      >
+                                        Reasoning
+                                      </span>
+                                      <ChevronDown size={14} className="ml-auto transition-transform group-open/think:rotate-180" />
+                                    </summary>
+                                    <div
+                                      className={cn("mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-4", typeof thDataStyle === 'string' ? thDataStyle : "")}
+                                      style={typeof thDataStyle === 'object' ? thDataStyle : {}}
+                                    >
+                                      <MarkdownRenderer text={thinkingContent} className="text-zinc-600 dark:text-zinc-400" />
+                                    </div>
+                                  </details>
+                                );
+                              })()}
+
+
+                              {(mainContent || (!thinkingContent && !hasTool)) ? (
+                                <div className="group mt-1 flex flex-col relative min-w-0 max-w-full">
                                   <div
-                                    key={i}
-                                    className={cn("h-12 w-12 border rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex flex-col items-center justify-center relative cursor-pointer hover:opacity-80 transition-opacity shrink-0", typeof attachmentPreviewStylesRaw?.itemStyle === 'string' ? attachmentPreviewStylesRaw.itemStyle : "")}
-                                    style={typeof attachmentPreviewStylesRaw?.itemStyle === 'object' ? attachmentPreviewStylesRaw.itemStyle : undefined}
-                                    onClick={() => {
-                                      if (media.type === 'document' && media.source?.mimeType === 'application/pdf') {
-                                        // Can't easily use createObjectURL from base64 synchronously without Blob, so use data URL
-                                        const pdfWindow = window.open("");
-                                        if (pdfWindow) {
-                                          pdfWindow.document.write(`<iframe width='100%' height='100%' src='${dataUrl}'></iframe>`);
-                                        }
-                                      } else if (isImage || isVideo || isAudio || (media.type === 'document' && media.source?.mimeType?.startsWith('text/'))) {
-                                        setSelectedPreviewFile({
-                                          file: new File([new Blob()], fileName),
-                                          base64: dataUrl,
-                                          type: media.source?.mimeType || ''
-                                        });
-                                      }
+                                    className={cn("relative z-10 break-words min-w-0", bubbleStyleClass ? "w-fit max-w-full" : "", bubbleStyleClass, isDeveloper ? "font-mono text-sm" : "")}
+                                    style={{
+                                      ...bubbleStyleObj,
+                                      ...(alignment === 'right' ? { borderBottomRightRadius: '4px' } : {}),
+                                      ...(alignment === 'left' ? { borderBottomLeftRadius: '4px' } : {})
                                     }}
                                   >
-                                    {isImage ? (
-                                      <img src={dataUrl} className="h-full w-full object-cover" alt={fileName} />
-                                    ) : isVideo ? (
-                                      <Video size={18} className="text-zinc-500" />
-                                    ) : isAudio ? (
-                                      <Mic size={18} className="text-zinc-500" />
-                                    ) : (
-                                      <FileText size={18} className="text-zinc-500" />
+                                    {mediaContents.length > 0 && (
+                                      <div
+                                        className={cn("flex flex-wrap gap-2 mb-2 w-full", typeof attachmentPreviewStylesRaw?.containerStyle === 'string' ? attachmentPreviewStylesRaw.containerStyle : "")}
+                                        style={typeof attachmentPreviewStylesRaw?.containerStyle === 'object' ? attachmentPreviewStylesRaw.containerStyle : undefined}
+                                      >
+                                        {mediaContents.map((media, i) => {
+                                          const dataUrl = `data:${media.source?.mimeType || 'application/octet-stream'};base64,${media.source?.value}`;
+                                          const fileName = media.source?.name || 'Attachment';
+                                          const isImage = media.type === 'image' || media.source?.mimeType?.startsWith('image/');
+                                          const isVideo = media.type === 'video' || media.source?.mimeType?.startsWith('video/');
+                                          const isAudio = media.type === 'audio' || media.source?.mimeType?.startsWith('audio/');
+
+                                          return (
+                                            <div
+                                              key={i}
+                                              className={cn("h-12 w-12 border rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex flex-col items-center justify-center relative cursor-pointer hover:opacity-80 transition-opacity shrink-0", typeof attachmentPreviewStylesRaw?.itemStyle === 'string' ? attachmentPreviewStylesRaw.itemStyle : "")}
+                                              style={typeof attachmentPreviewStylesRaw?.itemStyle === 'object' ? attachmentPreviewStylesRaw.itemStyle : undefined}
+                                              onClick={() => {
+                                                if (media.type === 'document' && media.source?.mimeType === 'application/pdf') {
+                                                  // Can't easily use createObjectURL from base64 synchronously without Blob, so use data URL
+                                                  const pdfWindow = window.open("");
+                                                  if (pdfWindow) {
+                                                    pdfWindow.document.write(`<iframe width='100%' height='100%' src='${dataUrl}'></iframe>`);
+                                                  }
+                                                } else if (isImage || isVideo || isAudio || (media.type === 'document' && media.source?.mimeType?.startsWith('text/'))) {
+                                                  setSelectedPreviewFile({
+                                                    file: new File([new Blob()], fileName),
+                                                    base64: dataUrl,
+                                                    type: media.source?.mimeType || ''
+                                                  });
+                                                }
+                                              }}
+                                            >
+                                              {isImage ? (
+                                                <img src={dataUrl} className="h-full w-full object-cover" alt={fileName} />
+                                              ) : isVideo ? (
+                                                <Video size={18} className="text-zinc-500" />
+                                              ) : isAudio ? (
+                                                <Mic size={18} className="text-zinc-500" />
+                                              ) : (
+                                                <FileText size={18} className="text-zinc-500" />
+                                              )}
+                                              <div className="absolute bottom-0 inset-x-0 bg-black/50 text-[8px] text-white truncate px-1 text-center backdrop-blur-sm pb-0.5 leading-none pt-0.5">
+                                                {fileName}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
                                     )}
-                                    <div className="absolute bottom-0 inset-x-0 bg-black/50 text-[8px] text-white truncate px-1 text-center backdrop-blur-sm pb-0.5 leading-none pt-0.5">
-                                      {fileName}
-                                    </div>
+                                    <MarkdownRenderer
+                                      text={mainContent}
+                                    />
                                   </div>
-                                );
-                              })}
+                                  <MessageFooter className={cn(
+                                    "opacity-0 group-hover:opacity-100 transition-opacity mt-1"
+                                  )}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                      onClick={() => handleCopy(msg.id, msg.content)}
+                                      title="Copy message"
+                                    >
+                                      {copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                                    </Button>
+                                  </MessageFooter>
+                                </div>
+                              ) : null}
+
+                              {showToolCalls && hasTool && (
+                                <div className="mt-3 flex flex-col gap-2 w-full min-w-0 max-w-full">
+                                  {toolInvocations.map((tool: any) => {
+                                    // When this is an A2UI tool call, show a status pill.
+                                    // The actual canvas is rendered externally.
+                                    if (hasA2UI && tool.toolName === a2uiToolName) {
+                                      return (
+                                        <A2UIToolPill
+                                          key={tool.toolCallId}
+                                          tool={tool}
+                                          agentId={agentId}
+                                        />
+                                      );
+                                    }
+
+                                    const tcStyles = messageStyle.toolCallStepStyles || {};
+                                    const headerStyles = tcStyles.headerStyles || {};
+                                    const reqStyles = tcStyles.requestDataStyles || {};
+                                    const resStyles = tcStyles.responseDataStyles || {};
+
+                                    return (
+                                      <Marker
+                                        key={tool.toolCallId}
+                                        className={cn("mb-2 items-start", typeof tcStyles.containerStyle === 'string' ? tcStyles.containerStyle : "")}
+                                        style={typeof tcStyles.containerStyle === 'object' ? tcStyles.containerStyle : {}}
+                                      >
+                                        <MarkerIcon className="mt-0.5">
+                                          <span
+                                            className={typeof headerStyles.iconStyles?.iconStyle === 'string' ? headerStyles.iconStyles.iconStyle : ""}
+                                            style={typeof headerStyles.iconStyles?.iconStyle === 'object' ? headerStyles.iconStyles.iconStyle : {}}
+                                          >
+                                            {headerStyles.iconStyles?.icon || <Wrench size={14} />}
+                                          </span>
+                                        </MarkerIcon>
+                                        <MarkerContent>
+                                          <details className="group [&_summary::-webkit-details-marker]:hidden w-full">
+                                            <summary className="flex items-center justify-between cursor-pointer list-none font-medium text-sm transition-colors text-zinc-700 dark:text-zinc-300">
+                                              <div className="flex items-center gap-2">
+                                                <span className="flex items-center">
+                                                  <span
+                                                    className={typeof headerStyles.titleStyles?.titleStyle === 'string' ? headerStyles.titleStyles.titleStyle : ""}
+                                                    style={typeof headerStyles.titleStyles?.titleStyle === 'object' ? headerStyles.titleStyles.titleStyle : {}}
+                                                  >
+                                                    Tool Call:
+                                                  </span>
+                                                  <span
+                                                    className={cn("ml-1", typeof headerStyles.titleStyles?.toolNameStyle === 'string' ? headerStyles.titleStyles.toolNameStyle : "")}
+                                                    style={typeof headerStyles.titleStyles?.toolNameStyle === 'object' ? headerStyles.titleStyles.toolNameStyle : {}}
+                                                  >
+                                                    {tool.toolName}
+                                                  </span>
+                                                  {messageToAgentMap.get(tool.toolCallId) && renderBadge(
+                                                    messageToAgentMap.get(tool.toolCallId) as string,
+                                                    subAgentBadgeStyleRaw,
+                                                    "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1 ml-2",
+                                                    "text-zinc-700 dark:text-zinc-300",
+                                                    <Bot size={12} />
+                                                  )}
+                                                </span>
+                                              </div>
+                                              <ChevronDown size={14} className="transition-transform duration-200 group-open:rotate-180 opacity-50" />
+                                            </summary>
+                                            <div className="mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                                              {reqStyles.titleStyle || reqStyles.icon ? (
+                                                <div className="font-medium mb-1 flex items-center gap-1">
+                                                  <span
+                                                    className={typeof reqStyles.iconStyle === 'string' ? reqStyles.iconStyle : ""}
+                                                    style={typeof reqStyles.iconStyle === 'object' ? reqStyles.iconStyle : {}}
+                                                  >
+                                                    {reqStyles.icon}
+                                                  </span>
+                                                  <span
+                                                    className={typeof reqStyles.titleStyle === 'string' ? reqStyles.titleStyle : ""}
+                                                    style={typeof reqStyles.titleStyle === 'object' ? reqStyles.titleStyle : {}}
+                                                  >
+                                                    Request
+                                                  </span>
+                                                </div>
+                                              ) : null}
+                                              <div
+                                                className={cn("overflow-x-auto rounded-md text-xs", typeof reqStyles.dataStyle === 'string' ? reqStyles.dataStyle : "")}
+                                                style={typeof reqStyles.dataStyle === 'object' ? reqStyles.dataStyle : {}}
+                                              >
+                                                <MarkdownRenderer text={`\`\`\`json\n${typeof tool.args === 'string' ? tool.args : JSON.stringify(tool.args, null, 2)}\n\`\`\``} />
+                                              </div>
+                                              {tool.result && (
+                                                <div className="mt-2 bg-green-50 dark:bg-green-950/30 rounded p-2 text-xs border border-green-100 dark:border-green-900">
+                                                  <div className="text-green-600 dark:text-green-400 font-medium mb-1 flex items-center gap-1">
+                                                    <span
+                                                      className={typeof resStyles.iconStyle === 'string' ? resStyles.iconStyle : ""}
+                                                      style={typeof resStyles.iconStyle === 'object' ? resStyles.iconStyle : {}}
+                                                    >
+                                                      {resStyles.icon || <CheckCircle2 size={12} />}
+                                                    </span>
+                                                    <span
+                                                      className={typeof resStyles.titleStyle === 'string' ? resStyles.titleStyle : ""}
+                                                      style={typeof resStyles.titleStyle === 'object' ? resStyles.titleStyle : {}}
+                                                    >
+                                                      Result
+                                                    </span>
+                                                  </div>
+                                                  <div
+                                                    className={cn("overflow-x-auto rounded-md text-xs [&_.prose]:text-zinc-700 dark:[&_.prose]:text-zinc-300", typeof resStyles.dataStyle === 'string' ? resStyles.dataStyle : "")}
+                                                    style={typeof resStyles.dataStyle === 'object' ? resStyles.dataStyle : {}}
+                                                  >
+                                                    <MarkdownRenderer text={`\`\`\`json\n${typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)}\n\`\`\``} />
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </details>
+                                        </MarkerContent>
+                                      </Marker>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </MessageContent>
+                          </Message>
+                        </MessageScrollerItem>
+                      );
+                    })}
+
+                    {(() => {
+                      // Extract active lifecycle events
+                      const runError = events.find((e: any) => {
+                        if (e.type !== 'RUN_ERROR' && e.type !== 'RunError') return false;
+                        const msg = String(e.message).toLowerCase();
+                        return !msg.includes('aborted') && !msg.includes('abort');
+                      });
+                      if (runError) {
+                        return (
+                          <MessageScrollerItem messageId="run-error" scrollAnchor={false}>
+                            <div className="mb-4 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 text-sm border border-red-200 dark:border-red-900">
+                              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1 font-medium">
+                                <AlertCircle size={14} />
+                                <span>Error</span>
+                              </div>
+                              <div className="text-red-700 dark:text-red-300">{runError.message || 'An error occurred during the run.'}</div>
                             </div>
-                          )}
-                          <MarkdownRenderer
-                            text={mainContent}
-                          />
-                        </div>
-                        <MessageFooter className={cn(
-                          "opacity-0 group-hover:opacity-100 transition-opacity mt-1"
-                        )}>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleCopy(msg.id, msg.content)}
-                            title="Copy message"
-                          >
-                            {copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-                          </Button>
-                        </MessageFooter>
-                      </div>
-                    ) : null}
+                          </MessageScrollerItem>
+                        );
+                      }
 
-                    {showToolCalls && hasTool && (
-                      <div className="mt-3 flex flex-col gap-2 w-full min-w-0 max-w-full">
-                        {toolInvocations.map((tool: any) => {
-                          // When this is an A2UI tool call, show a status pill.
-                          // The actual canvas is rendered externally.
-                          if (hasA2UI && tool.toolName === a2uiToolName) {
-                            return (
-                              <A2UIToolPill
-                                key={tool.toolCallId}
-                                tool={tool}
-                                agentId={agentId}
-                              />
-                            );
-                          }
+                      // const abortError = events.find((e: any) => {
+                      //   if (e.type !== 'RUN_ERROR' && e.type !== 'RunError') return false;
+                      //   const msg = String(e.message).toLowerCase();
+                      //   return msg.includes('aborted') || msg.includes('abort');
+                      // });
+                      // if (abortError) {
+                      //   return (
+                      //     <Marker variant="separator" className="mb-4">
+                      //       <MarkerContent>Response Stopped</MarkerContent>
+                      //     </Marker>
+                      //   );
+                      // }
 
-                          const tcStyles = messageStyle.toolCallStepStyles || {};
-                          const headerStyles = tcStyles.headerStyles || {};
-                          const reqStyles = tcStyles.requestDataStyles || {};
-                          const resStyles = tcStyles.responseDataStyles || {};
+                      if (isLoading) {
+                        // Find the latest step event
+                        const stepEvents = events.filter((e: any) => e.type === 'STEP_STARTED' || e.type === 'StepStarted' || e.type === 'STEP_FINISHED' || e.type === 'StepFinished');
+                        const lastStep = stepEvents[stepEvents.length - 1];
+                        const activeStepName = (lastStep && (lastStep.type === 'STEP_STARTED' || lastStep.type === 'StepStarted')) ? lastStep.stepName : null;
 
-                          return (
+                        const tStyles = messageStyle.thinkingStepStyles || {};
+                        const thContainerStyle = tStyles.containerStyle;
+                        const thIconStyles = tStyles.iconStyles || {};
+                        const thTitleStyle = tStyles.titleStyle;
+
+                        return (
+                          <MessageScrollerItem messageId="is-loading" scrollAnchor={false}>
                             <Marker
-                              key={tool.toolCallId}
-                              className={cn("mb-2 items-start", typeof tcStyles.containerStyle === 'string' ? tcStyles.containerStyle : "")}
-                              style={typeof tcStyles.containerStyle === 'object' ? tcStyles.containerStyle : {}}
+                              className={cn(typeof thContainerStyle === 'string' ? thContainerStyle : "")}
+                              style={typeof thContainerStyle === 'object' ? thContainerStyle : undefined}
                             >
-                              <MarkerIcon className="mt-0.5">
+                              <MarkerIcon>
                                 <span
-                                  className={typeof headerStyles.iconStyles?.iconStyle === 'string' ? headerStyles.iconStyles.iconStyle : ""}
-                                  style={typeof headerStyles.iconStyles?.iconStyle === 'object' ? headerStyles.iconStyles.iconStyle : {}}
+                                  className={typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : ""}
+                                  style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
                                 >
-                                  {headerStyles.iconStyles?.icon || <Wrench size={14} />}
+                                  {thIconStyles.icon || <PlayCircle size={14} className="animate-spin" />}
                                 </span>
                               </MarkerIcon>
-                              <MarkerContent>
-                                <details className="group [&_summary::-webkit-details-marker]:hidden w-full">
-                                  <summary className="flex items-center justify-between cursor-pointer list-none font-medium text-sm transition-colors text-zinc-700 dark:text-zinc-300">
-                                    <div className="flex items-center gap-2">
-                                      <span className="flex items-center">
-                                        <span
-                                          className={typeof headerStyles.titleStyles?.titleStyle === 'string' ? headerStyles.titleStyles.titleStyle : ""}
-                                          style={typeof headerStyles.titleStyles?.titleStyle === 'object' ? headerStyles.titleStyles.titleStyle : {}}
-                                        >
-                                          Tool Call:
-                                        </span>
-                                        <span
-                                          className={cn("ml-1", typeof headerStyles.titleStyles?.toolNameStyle === 'string' ? headerStyles.titleStyles.toolNameStyle : "")}
-                                          style={typeof headerStyles.titleStyles?.toolNameStyle === 'object' ? headerStyles.titleStyles.toolNameStyle : {}}
-                                        >
-                                          {tool.toolName}
-                                        </span>
-                                        {messageToAgentMap.get(tool.toolCallId) && renderBadge(
-                                          messageToAgentMap.get(tool.toolCallId) as string,
-                                          subAgentBadgeStyleRaw,
-                                          "px-2 py-0.5 text-xs font-medium bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center gap-1 ml-2",
-                                          "text-zinc-700 dark:text-zinc-300",
-                                          <Bot size={12} />
-                                        )}
-                                      </span>
-                                    </div>
-                                    <ChevronDown size={14} className="transition-transform duration-200 group-open:rotate-180 opacity-50" />
-                                  </summary>
-                                  <div className="mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                                    {reqStyles.titleStyle || reqStyles.icon ? (
-                                      <div className="font-medium mb-1 flex items-center gap-1">
-                                        <span
-                                          className={typeof reqStyles.iconStyle === 'string' ? reqStyles.iconStyle : ""}
-                                          style={typeof reqStyles.iconStyle === 'object' ? reqStyles.iconStyle : {}}
-                                        >
-                                          {reqStyles.icon}
-                                        </span>
-                                        <span
-                                          className={typeof reqStyles.titleStyle === 'string' ? reqStyles.titleStyle : ""}
-                                          style={typeof reqStyles.titleStyle === 'object' ? reqStyles.titleStyle : {}}
-                                        >
-                                          Request
-                                        </span>
-                                      </div>
-                                    ) : null}
-                                    <div
-                                      className={cn("overflow-x-auto rounded-md text-xs", typeof reqStyles.dataStyle === 'string' ? reqStyles.dataStyle : "")}
-                                      style={typeof reqStyles.dataStyle === 'object' ? reqStyles.dataStyle : {}}
-                                    >
-                                      <MarkdownRenderer text={`\`\`\`json\n${typeof tool.args === 'string' ? tool.args : JSON.stringify(tool.args, null, 2)}\n\`\`\``} />
-                                    </div>
-                                    {tool.result && (
-                                      <div className="mt-2 bg-green-50 dark:bg-green-950/30 rounded p-2 text-xs border border-green-100 dark:border-green-900">
-                                        <div className="text-green-600 dark:text-green-400 font-medium mb-1 flex items-center gap-1">
-                                          <span
-                                            className={typeof resStyles.iconStyle === 'string' ? resStyles.iconStyle : ""}
-                                            style={typeof resStyles.iconStyle === 'object' ? resStyles.iconStyle : {}}
-                                          >
-                                            {resStyles.icon || <CheckCircle2 size={12} />}
-                                          </span>
-                                          <span
-                                            className={typeof resStyles.titleStyle === 'string' ? resStyles.titleStyle : ""}
-                                            style={typeof resStyles.titleStyle === 'object' ? resStyles.titleStyle : {}}
-                                          >
-                                            Result
-                                          </span>
-                                        </div>
-                                        <div
-                                          className={cn("overflow-x-auto rounded-md text-xs [&_.prose]:text-zinc-700 dark:[&_.prose]:text-zinc-300", typeof resStyles.dataStyle === 'string' ? resStyles.dataStyle : "")}
-                                          style={typeof resStyles.dataStyle === 'object' ? resStyles.dataStyle : {}}
-                                        >
-                                          <MarkdownRenderer text={`\`\`\`json\n${typeof tool.result === 'string' ? tool.result : JSON.stringify(tool.result, null, 2)}\n\`\`\``} />
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </details>
+                              <MarkerContent className={cn("shimmer", typeof thTitleStyle === 'string' ? thTitleStyle : "")} style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}>
+                                {activeStepName ? `Executing step: ${activeStepName}...` : 'AI is thinking...'}
                               </MarkerContent>
                             </Marker>
-                          );
-                        })}
-                      </div>
-                    )}
-                    </MessageContent>
-                  </Message>
-                  </MessageScrollerItem>
-                );
-              })}
-
-              {(() => {
-                // Extract active lifecycle events
-                const runError = events.find((e: any) => {
-                  if (e.type !== 'RUN_ERROR' && e.type !== 'RunError') return false;
-                  const msg = String(e.message).toLowerCase();
-                  return !msg.includes('aborted') && !msg.includes('abort');
-                });
-                if (runError) {
-                  return (
-                    <MessageScrollerItem messageId="run-error" scrollAnchor={false}>
-                      <div className="mb-4 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 text-sm border border-red-200 dark:border-red-900">
-                        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1 font-medium">
-                          <AlertCircle size={14} />
-                          <span>Error</span>
-                        </div>
-                        <div className="text-red-700 dark:text-red-300">{runError.message || 'An error occurred during the run.'}</div>
-                      </div>
-                    </MessageScrollerItem>
-                  );
-                }
-
-                // const abortError = events.find((e: any) => {
-                //   if (e.type !== 'RUN_ERROR' && e.type !== 'RunError') return false;
-                //   const msg = String(e.message).toLowerCase();
-                //   return msg.includes('aborted') || msg.includes('abort');
-                // });
-                // if (abortError) {
-                //   return (
-                //     <Marker variant="separator" className="mb-4">
-                //       <MarkerContent>Response Stopped</MarkerContent>
-                //     </Marker>
-                //   );
-                // }
-
-                if (isLoading) {
-                  // Find the latest step event
-                  const stepEvents = events.filter((e: any) => e.type === 'STEP_STARTED' || e.type === 'StepStarted' || e.type === 'STEP_FINISHED' || e.type === 'StepFinished');
-                  const lastStep = stepEvents[stepEvents.length - 1];
-                  const activeStepName = (lastStep && (lastStep.type === 'STEP_STARTED' || lastStep.type === 'StepStarted')) ? lastStep.stepName : null;
-
-                  const tStyles = messageStyle.thinkingStepStyles || {};
-                  const thContainerStyle = tStyles.containerStyle;
-                  const thIconStyles = tStyles.iconStyles || {};
-                  const thTitleStyle = tStyles.titleStyle;
-
-                  return (
-                    <MessageScrollerItem messageId="is-loading" scrollAnchor={false}>
-                      <Marker
-                        className={cn(typeof thContainerStyle === 'string' ? thContainerStyle : "")}
-                        style={typeof thContainerStyle === 'object' ? thContainerStyle : undefined}
-                      >
-                        <MarkerIcon>
-                          <span
-                            className={typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : ""}
-                            style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
-                          >
-                            {thIconStyles.icon || <PlayCircle size={14} className="animate-spin" />}
-                          </span>
-                        </MarkerIcon>
-                        <MarkerContent className={cn("shimmer", typeof thTitleStyle === 'string' ? thTitleStyle : "")} style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}>
-                          {activeStepName ? `Executing step: ${activeStepName}...` : 'AI is thinking...'}
-                        </MarkerContent>
-                      </Marker>
-                    </MessageScrollerItem>
-                  );
-                }
-                return null;
-              })()}
+                          </MessageScrollerItem>
+                        );
+                      }
+                      return null;
+                    })()}
                   </MessageScrollerContent>
                 </MessageScrollerViewport>
                 <MessageScrollerButton

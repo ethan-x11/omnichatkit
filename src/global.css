@@ -125,4 +125,8 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  [data-slot="message-scroller-viewport"]::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
 }
