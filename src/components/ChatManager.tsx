@@ -307,6 +307,7 @@ export function ChatManager({
 
   const handleFormSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isLoading) return;
     if (!input.trim() && attachedFiles.length === 0) return;
 
     if (attachedFiles.length > 0 && append) {
@@ -353,6 +354,7 @@ export function ChatManager({
   };
 
   const handleChipClick = async (prompt: string) => {
+    if (isLoading) return;
     if (!prompt.trim() || !context?.append) return;
 
     try {
@@ -1261,7 +1263,7 @@ export function ChatManager({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        if (input.trim()) {
+                        if (input.trim() && !isLoading) {
                           e.currentTarget.form?.requestSubmit();
                         }
                       }
@@ -1279,7 +1281,10 @@ export function ChatManager({
                 <Button
                   type="button"
                   size="icon"
-                  onClick={() => context?.stop && context.stop()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    context?.stop && context.stop();
+                  }}
                   variant={isAgUI ? 'secondary' : 'default'}
                   className={typeof inputSectionStyle.sendButtonStyles?.containerStyle === 'string' ? inputSectionStyle.sendButtonStyles.containerStyle : ""}
                   style={typeof inputSectionStyle.sendButtonStyles?.containerStyle === 'object' ? inputSectionStyle.sendButtonStyles.containerStyle : undefined}
