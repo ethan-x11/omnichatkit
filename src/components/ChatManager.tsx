@@ -5,6 +5,14 @@ import { AGUIChatContext } from './AGUIChatProvider';
 import { useAIChatStore } from '../store/useAIChatStore';
 import { ChatManagerProps } from '../types';
 import { A2UICanvas } from './A2UICanvas';
+import {
+  MessageScrollerProvider,
+  MessageScroller,
+  MessageScrollerViewport,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerButton,
+} from './ui/message-scroller';
 import { OverlayScrollbarsComponent, useOverlayScrollbars } from 'overlayscrollbars-react';
 import 'overlayscrollbars/overlayscrollbars.css';
 import { Input } from './ui/input';
@@ -293,38 +301,9 @@ export function ChatManager({
   const isEmbeddedCollapsible = isEmbedded && collapsible;
 
   const [isHydrated, setIsHydrated] = React.useState(false);
-  const [initTextareaScrollbars] = useOverlayScrollbars({
-    options: { scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }
-  });
   React.useEffect(() => {
     setIsHydrated(true);
   }, []);
-
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
-  const [userScrolledUp, setUserScrolledUp] = React.useState(false);
-  const handleScroll = (instanceOrEvent: any) => {
-    let target;
-    if (instanceOrEvent && typeof instanceOrEvent.elements === 'function') {
-      target = instanceOrEvent.elements().viewport;
-    } else if (instanceOrEvent && instanceOrEvent.currentTarget) {
-      target = instanceOrEvent.currentTarget;
-    } else {
-      return;
-    }
-    // Allow a 50px threshold to determine if we are at the bottom
-    const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 50;
-    if (isAtBottom && userScrolledUp) {
-      setUserScrolledUp(false);
-    } else if (!isAtBottom && !userScrolledUp) {
-      setUserScrolledUp(true);
-    }
-  };
-
-  React.useEffect(() => {
-    if (autoScroll && !userScrolledUp) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, autoScroll, userScrolledUp]);
 
   const handleFormSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -536,13 +515,13 @@ export function ChatManager({
         {/* Primary Chat Feed */}
         <div className={`flex flex-col flex-1 h-full min-w-0`}>
           <div className="relative flex-1 min-h-0 flex flex-col">
-            <OverlayScrollbarsComponent
-              className={cn("flex-1 p-4", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
-              style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
-              events={{ scroll: handleScroll }}
-              options={{ scrollbars: { autoHide: 'leave', theme: 'os-theme-dark' } }}
-              defer
-            >
+            <MessageScrollerProvider autoScroll={autoScroll} defaultScrollPosition="last-anchor">
+              <MessageScroller className="flex-1 h-full min-w-0">
+                <MessageScrollerViewport
+                  className={cn("flex-1 p-4", typeof messageStyle.backgroundStyle === 'string' ? messageStyle.backgroundStyle : "")}
+                  style={typeof messageStyle.backgroundStyle === 'object' ? messageStyle.backgroundStyle : undefined}
+                >
+                  <MessageScrollerContent>
               {messages.length === 0 && welcomeScreen && (
                 <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
                   {typeof welcomeScreen === 'boolean' ? (
@@ -571,68 +550,77 @@ export function ChatManager({
 
                 if ((msg.role as string) === 'reasoning') {
                   return (
-                    <details key={msg.id} className="mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group">
-                      <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
-                        <Brain size={14} className="animate-pulse" />
-                        <span>Reasoning</span>
-                        <ChevronDown size={14} className="ml-auto transition-transform group-open:rotate-180" />
-                      </summary>
-                      <div className="text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-2">{msg.content}</div>
-                    </details>
+                    <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                      <details className="mb-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800 group">
+                        <summary className="flex items-center gap-2 text-zinc-500 font-medium cursor-pointer select-none list-none marker:hidden">
+                          <Brain size={14} className="animate-pulse" />
+                          <span>Reasoning</span>
+                          <ChevronDown size={14} className="ml-auto transition-transform group-open:rotate-180" />
+                        </summary>
+                        <div className="text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap mt-3 border-t border-zinc-200 dark:border-zinc-700 pt-2">{msg.content}</div>
+                      </details>
+                    </MessageScrollerItem>
                   );
                 }
 
                 if ((msg.role as string) === 'activity') {
                   return (
-                    <div key={msg.id} className="mb-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 text-sm border border-blue-100 dark:border-blue-900">
-                      <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1 font-medium">
-                        <Activity size={14} />
-                        <span>Activity Update</span>
+                    <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                      <div className="mb-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 text-sm border border-blue-100 dark:border-blue-900">
+                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1 font-medium">
+                          <Activity size={14} />
+                          <span>Activity Update</span>
+                        </div>
+                        <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
+                          {msg.content}
+                        </div>
                       </div>
-                      <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
-                        {msg.content}
-                      </div>
-                    </div>
+                    </MessageScrollerItem>
                   );
                 }
 
                 if ((msg.role as string) === 'tool') {
                   return (
-                    <div key={msg.id} className="mb-4 bg-green-50 dark:bg-green-950/30 rounded-lg p-3 text-sm border border-green-100 dark:border-green-900">
-                      <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1 font-medium">
-                        <CheckCircle2 size={14} />
-                        <span>Tool Result</span>
+                    <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                      <div className="mb-4 bg-green-50 dark:bg-green-950/30 rounded-lg p-3 text-sm border border-green-100 dark:border-green-900">
+                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1 font-medium">
+                          <CheckCircle2 size={14} />
+                          <span>Tool Result</span>
+                        </div>
+                        <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
+                          {msg.content}
+                        </div>
                       </div>
-                      <div className="text-zinc-700 dark:text-zinc-300 font-mono text-xs overflow-x-auto">
-                        {msg.content}
-                      </div>
-                    </div>
+                    </MessageScrollerItem>
                   );
                 }
 
                 if ((msg.role as string) === 'system') {
                   if (msg.content === 'Response Stopped') {
                     return (
-                      <Marker
-                        key={msg.id}
-                        variant="separator"
-                        className={cn(
-                          "mb-4",
-                          typeof messageStyle.stopResponseStyle === 'string' ? messageStyle.stopResponseStyle : ""
-                        )}
-                        style={typeof messageStyle.stopResponseStyle === 'object' ? messageStyle.stopResponseStyle : undefined}
-                      >
-                        <MarkerContent>Response Stopped</MarkerContent>
-                      </Marker>
+                      <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                        <Marker
+                          variant="separator"
+                          className={cn(
+                            "mb-4",
+                            typeof messageStyle.stopResponseStyle === 'string' ? messageStyle.stopResponseStyle : ""
+                          )}
+                          style={typeof messageStyle.stopResponseStyle === 'object' ? messageStyle.stopResponseStyle : undefined}
+                        >
+                          <MarkerContent>Response Stopped</MarkerContent>
+                        </Marker>
+                      </MessageScrollerItem>
                     );
                   }
 
                   return (
-                    <div key={msg.id} className="mb-4 bg-zinc-100 dark:bg-zinc-900/50 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800">
-                      <div className="text-zinc-600 dark:text-zinc-400">
-                        {msg.content}
+                    <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                      <div className="mb-4 bg-zinc-100 dark:bg-zinc-900/50 rounded-lg p-3 text-sm border border-zinc-200 dark:border-zinc-800">
+                        <div className="text-zinc-600 dark:text-zinc-400">
+                          {msg.content}
+                        </div>
                       </div>
-                    </div>
+                    </MessageScrollerItem>
                   );
                 }
 
@@ -725,23 +713,26 @@ export function ChatManager({
                   const actContainerStyleObj = typeof actStyles === 'object' && typeof actStyles.containerStyle === 'object' ? actStyles.containerStyle : {};
 
                   return (
-                    <div key={msg.id} className={cn("mb-4 group relative w-full flex flex-col", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
-                      <div className={actContainerStyleClass} style={actContainerStyleObj}>
-                        <div className="flex items-center gap-2 font-medium mb-1">
-                          <Activity size={14} />
-                          {(msg as any).activityType || 'Activity'}
+                    <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                      <div className={cn("mb-4 group relative w-full flex flex-col", alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass, containerStyleClass)} style={containerStyleObj}>
+                        <div className={actContainerStyleClass} style={actContainerStyleObj}>
+                          <div className="flex items-center gap-2 font-medium mb-1">
+                            <Activity size={14} />
+                            {(msg as any).activityType || 'Activity'}
+                          </div>
+                          <pre className="text-xs overflow-x-auto p-2 bg-white/50 dark:bg-black/20 rounded">
+                            {mainContent}
+                          </pre>
                         </div>
-                        <pre className="text-xs overflow-x-auto p-2 bg-white/50 dark:bg-black/20 rounded">
-                          {mainContent}
-                        </pre>
                       </div>
-                    </div>
+                    </MessageScrollerItem>
                   );
                 }
 
                 return (
-                  <Message key={msg.id} className={cn("mb-4", containerStyleClass)} style={containerStyleObj} align={alignment === 'right' ? 'end' : 'start'}>
-                    <MessageContent className={cn(alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass)}>
+                  <MessageScrollerItem key={msg.id} messageId={msg.id} scrollAnchor={msg.role === 'user'}>
+                    <Message className={cn("mb-4", containerStyleClass)} style={containerStyleObj} align={alignment === 'right' ? 'end' : 'start'}>
+                      <MessageContent className={cn(alignment === 'left' ? 'pr-8' : alignment === 'right' ? 'pl-8' : 'px-8', alignmentClass)}>
                     {(mainContent || thinkingContent || (!thinkingContent && !hasTool)) && (
                       <MessageHeader className="font-bold mb-2 px-0 flex items-center gap-2 min-w-0 max-w-full">
                         {isUser ? (
@@ -1001,6 +992,7 @@ export function ChatManager({
                     )}
                     </MessageContent>
                   </Message>
+                  </MessageScrollerItem>
                 );
               })}
 
@@ -1013,13 +1005,15 @@ export function ChatManager({
                 });
                 if (runError) {
                   return (
-                    <div className="mb-4 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 text-sm border border-red-200 dark:border-red-900">
-                      <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1 font-medium">
-                        <AlertCircle size={14} />
-                        <span>Error</span>
+                    <MessageScrollerItem messageId="run-error" scrollAnchor={false}>
+                      <div className="mb-4 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 text-sm border border-red-200 dark:border-red-900">
+                        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1 font-medium">
+                          <AlertCircle size={14} />
+                          <span>Error</span>
+                        </div>
+                        <div className="text-red-700 dark:text-red-300">{runError.message || 'An error occurred during the run.'}</div>
                       </div>
-                      <div className="text-red-700 dark:text-red-300">{runError.message || 'An error occurred during the run.'}</div>
-                    </div>
+                    </MessageScrollerItem>
                   );
                 }
 
@@ -1048,40 +1042,32 @@ export function ChatManager({
                   const thTitleStyle = tStyles.titleStyle;
 
                   return (
-                    <Marker
-                      className={cn(typeof thContainerStyle === 'string' ? thContainerStyle : "")}
-                      style={typeof thContainerStyle === 'object' ? thContainerStyle : undefined}
-                    >
-                      <MarkerIcon>
-                        <span
-                          className={typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : ""}
-                          style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
-                        >
-                          {thIconStyles.icon || <PlayCircle size={14} className="animate-spin" />}
-                        </span>
-                      </MarkerIcon>
-                      <MarkerContent className={cn("shimmer", typeof thTitleStyle === 'string' ? thTitleStyle : "")} style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}>
-                        {activeStepName ? `Executing step: ${activeStepName}...` : 'AI is thinking...'}
-                      </MarkerContent>
-                    </Marker>
+                    <MessageScrollerItem messageId="is-loading" scrollAnchor={false}>
+                      <Marker
+                        className={cn(typeof thContainerStyle === 'string' ? thContainerStyle : "")}
+                        style={typeof thContainerStyle === 'object' ? thContainerStyle : undefined}
+                      >
+                        <MarkerIcon>
+                          <span
+                            className={typeof thIconStyles.iconStyle === 'string' ? thIconStyles.iconStyle : ""}
+                            style={typeof thIconStyles.iconStyle === 'object' ? thIconStyles.iconStyle : {}}
+                          >
+                            {thIconStyles.icon || <PlayCircle size={14} className="animate-spin" />}
+                          </span>
+                        </MarkerIcon>
+                        <MarkerContent className={cn("shimmer", typeof thTitleStyle === 'string' ? thTitleStyle : "")} style={typeof thTitleStyle === 'object' ? thTitleStyle : {}}>
+                          {activeStepName ? `Executing step: ${activeStepName}...` : 'AI is thinking...'}
+                        </MarkerContent>
+                      </Marker>
+                    </MessageScrollerItem>
                   );
                 }
                 return null;
               })()}
-              <div ref={messagesEndRef} />
-            </OverlayScrollbarsComponent>
-
-            {userScrolledUp && (
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10 pointer-events-none">
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="rounded-full shadow-md w-8 h-8 opacity-90 hover:opacity-100 pointer-events-auto bg-background border border-border text-foreground transition-opacity"
-                  onClick={() => {
-                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                    setUserScrolledUp(false);
-                  }}
-                  title="Scroll to bottom"
+                  </MessageScrollerContent>
+                </MessageScrollerViewport>
+                <MessageScrollerButton
+                  className="rounded-full shadow-md w-8 h-8 opacity-90 hover:opacity-100"
                 >
                   <span
                     className={typeof scrollButtonStyles.iconStyles === 'string' ? scrollButtonStyles.iconStyles : ""}
@@ -1089,9 +1075,9 @@ export function ChatManager({
                   >
                     {scrollButtonStyles.icon || <ArrowDown size={16} />}
                   </span>
-                </Button>
-              </div>
-            )}
+                </MessageScrollerButton>
+              </MessageScroller>
+            </MessageScrollerProvider>
           </div>
 
           {promptChips?.promptChipList && promptChips.promptChipList.length > 0 && (promptChips.alwaysShow || messages.length === 0) && (
@@ -1535,3 +1521,4 @@ export function ChatManager({
     </>
   );
 }
+
