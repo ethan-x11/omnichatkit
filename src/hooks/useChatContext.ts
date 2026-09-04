@@ -11,10 +11,10 @@ import type { ChatContextHelpers } from '../components/AIChatProvider';
  *
  * When used inside `<OmniChat>`, the correct provider is rendered automatically.
  * When both providers are somehow present simultaneously, `apiMode` from the store
- * (set by `<OmniChat api_mode="...">`) is used as a tiebreaker.
+ * (set by `<OmniChat apiMode="...">`) is used as a tiebreaker.
  *
  * This hook intentionally does NOT rely on the `apiMode` store value as the primary
- * signal to avoid race conditions: `useEffect` (which syncs `api_mode` to the store)
+ * signal to avoid race conditions: `useEffect` (which syncs `apiMode` to the store)
  * runs after the first render, meaning the store default would always win on mount.
  *
  * @throws If neither context is available in the React tree.

@@ -68,7 +68,7 @@ export interface ChatLabels {
   assistantLabel?: string | ReactNode;
 }
 
-export interface WelcomeScreenProps {}
+export interface WelcomeScreenProps { }
 export type SlotValue<T> = T | ReactNode;
 
 /**
@@ -207,7 +207,7 @@ export interface ApiResponseSchema {
    * Full custom deserializer. When provided, receives the raw parsed JSON and
    * must return a partial `Message`-compatible object.
    */
-  transform?: (raw: Record<string, unknown>) => Partial<{ role: string; content: string; [key: string]: unknown }>;
+  transform?: (raw: Record<string, unknown>) => Partial<{ role: string; content: string;[key: string]: unknown }>;
 }
 
 /** Combined schema that pairs a request serializer with a response deserializer. */
@@ -224,7 +224,7 @@ export interface AIChatProviderProps {
   /** Visual theme for the chat. */
   theme?: ChatTheme;
   /** The endpoint route for the Vercel AI SDK `useChat`. */
-  apiEndpoint?: string; 
+  apiEndpoint?: string;
   /** Optional identifier for the current agent context. */
   agentId?: string;
   /** Unique ID for the current chat session. */
@@ -371,7 +371,7 @@ export interface ChatManagerComponentStyles {
 /**
  * Core configuration properties for the ChatManager component.
  */
-export type ChatManagerBaseProps = { 
+export type ChatManagerBaseProps = {
   /** Theme to apply to the ChatManager. */
   theme?: ChatTheme;
   /** Additional CSS class names. */
@@ -415,9 +415,9 @@ export type ChatManagerBaseProps = {
   /** The active session ID. */
   sessionId?: string;
   /** Position for the detached A2UI canvas (used when layout is 'split'). */
-  a2uiPosition?: ComponentPosition; 
+  a2uiPosition?: ComponentPosition;
   /** Whether the split A2UI canvas is collapsible. */
-  collapsibleA2UI?: boolean; 
+  collapsibleA2UI?: boolean;
   /** Maximum character limit for the user input. */
   maxInputCharacter?: number;
   /** Whether the chat backend streams responses. */
@@ -496,7 +496,7 @@ export interface SessionManagerBaseProps {
   className?: string;
   style?: React.CSSProperties;
   /** The position of the drawer or inline sidebar. */
-  position?: ComponentPosition; 
+  position?: ComponentPosition;
   /** Callback fired when a session is selected. */
   onSessionSelect?: (sessionId: string) => void;
   /** Callback fired when creating a new session. */
@@ -510,33 +510,33 @@ export interface SessionManagerBaseProps {
  */
 export type SessionManagerProps = SessionManagerBaseProps & (
   | {
-      /** 
-       * If true, the session manager can be collapsed.
-       * How it collapses depends on the `variant` prop.
-       */
-      collapsible?: true;
-      /**
-       * The visual style of the session manager.
-       * - 'sheet': A slide-out panel (Sheet).
-       * - 'drawer': A swipeable panel (Drawer).
-       * - 'inline-sheet': A collapsible sidebar with Sheet styling.
-       * - 'inline-drawer': A collapsible sidebar with Drawer styling.
-       * Default is 'inline-sheet'.
-       */
-      variant?: 'sheet' | 'inline-sheet' | 'drawer' | 'inline-drawer';
-    }
+    /** 
+     * If true, the session manager can be collapsed.
+     * How it collapses depends on the `variant` prop.
+     */
+    collapsible?: true;
+    /**
+     * The visual style of the session manager.
+     * - 'sheet': A slide-out panel (Sheet).
+     * - 'drawer': A swipeable panel (Drawer).
+     * - 'inline-sheet': A collapsible sidebar with Sheet styling.
+     * - 'inline-drawer': A collapsible sidebar with Drawer styling.
+     * Default is 'inline-sheet'.
+     */
+    variant?: 'sheet' | 'inline-sheet' | 'drawer' | 'inline-drawer';
+  }
   | {
-      /** 
-       * If true, the session manager can be collapsed.
-       * How it collapses depends on the `variant` prop.
-       */
-      collapsible: false;
-      /**
-       * The visual style of the session manager.
-       * When collapsible is false, only inline variants are allowed.
-       */
-      variant?: 'inline-sheet' | 'inline-drawer';
-    }
+    /** 
+     * If true, the session manager can be collapsed.
+     * How it collapses depends on the `variant` prop.
+     */
+    collapsible: false;
+    /**
+     * The visual style of the session manager.
+     * When collapsible is false, only inline variants are allowed.
+     */
+    variant?: 'inline-sheet' | 'inline-drawer';
+  }
 );
 
 type OmniChatBaseProps = {
@@ -551,20 +551,20 @@ type OmniChatBaseProps = {
 
 /**
  * Props for `<OmniChat />`. The `chatApiSchema` prop is only accepted (and only
- * meaningful) when `api_mode` is `'classic'`.
+ * meaningful) when `apiMode` is `'classic'`.
  */
 export type OmniChatProps = OmniChatBaseProps & (
   | {
-      api_mode: 'classic';
-      /**
-       * Maps OmniChatKit's internal message structure to your backend API's
-       * request/response shape. Provide `apiRequestSchema` to customize how
-       * messages are serialized before being sent, and `apiResponseSchema` to
-       * customize how the raw API response is parsed back into messages.
-       */
-      chatApiSchema?: ApiSchema;
-    }
-  | { api_mode: 'ag-ui'; chatApiSchema?: never }
+    apiMode: 'classic';
+    /**
+     * Maps OmniChatKit's internal message structure to your backend API's
+     * request/response shape. Provide `apiRequestSchema` to customize how
+     * messages are serialized before being sent, and `apiResponseSchema` to
+     * customize how the raw API response is parsed back into messages.
+     */
+    chatApiSchema?: ApiSchema;
+  }
+  | { apiMode: 'ag-ui'; chatApiSchema?: never }
 );
 
 /**

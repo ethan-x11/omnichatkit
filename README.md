@@ -40,7 +40,7 @@ OmniChatKit is designed to be highly flexible. You can use the all-in-one `<Omni
 
 ### 1. The `<OmniChat>` Wrapper (Recommended)
 
-The `<OmniChat>` component is the easiest way to orchestrate providers, generative UI, and chat interfaces. Simply choose your `api_mode` and drop in your components.
+The `<OmniChat>` component is the easiest way to orchestrate providers, generative UI, and chat interfaces. Simply choose your `apiMode` and drop in your components.
 
 ```tsx
 import { OmniChat, SessionManager } from 'omnichatkit';
@@ -48,7 +48,7 @@ import { OmniChat, SessionManager } from 'omnichatkit';
 export default function ChatPage() {
   return (
     <OmniChat 
-      api_mode="ag-ui" // "ag-ui" or "classic"
+      apiMode="ag-ui" // "ag-ui" or "classic"
       apiEndpoint="/api/agent"
       a2uiProps={{
         a2uiToolName: "render-dynamic-ui",
@@ -96,9 +96,9 @@ export default function ChatPage() {
 
 ### 3. API Route Setup
 
-Depending on your `api_mode`, you need to set up your backend endpoint.
+Depending on your `apiMode`, you need to set up your backend endpoint.
 
-#### Vercel AI SDK Route (`api_mode="classic"`)
+#### Vercel AI SDK Route (`apiMode="classic"`)
 ```typescript
 // app/api/chat/route.ts
 import { streamText } from 'ai';
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
 }
 ```
 
-#### AG-UI Protocol Route (`api_mode="ag-ui"`)
+#### AG-UI Protocol Route (`apiMode="ag-ui"`)
 ```typescript
 // app/api/agent/route.ts
 import { AGUIServer } from '@ag-ui/server';
@@ -130,11 +130,11 @@ export async function POST(req: Request) {
 
 ### 4. `chatApiSchema` — Custom Backend Mapping (`classic` mode)
 
-When `api_mode="classic"`, OmniChatKit uses the Vercel AI SDK's `useChat` hook under the hood, which sends messages in its own standard body shape. If your backend API expects a **different request/response format**, pass a `chatApiSchema` prop to `<OmniChat>` to act as a transparent mapper between the two.
+When `apiMode="classic"`, OmniChatKit uses the Vercel AI SDK's `useChat` hook under the hood, which sends messages in its own standard body shape. If your backend API expects a **different request/response format**, pass a `chatApiSchema` prop to `<OmniChat>` to act as a transparent mapper between the two.
 
 ```tsx
 <OmniChat
-  api_mode="classic"
+  apiMode="classic"
   apiEndpoint="/api/my-custom-agent"
   chatApiSchema={{
     apiRequestSchema: { /* how to serialize the outbound request */ },
@@ -146,7 +146,7 @@ When `api_mode="classic"`, OmniChatKit uses the Vercel AI SDK's `useChat` hook u
 ```
 
 > [!NOTE]
-> `chatApiSchema` is a **compile-time narrowed prop** — TypeScript will reject it (type error) if you pass it while `api_mode="ag-ui"`.
+> `chatApiSchema` is a **compile-time narrowed prop** — TypeScript will reject it (type error) if you pass it while `apiMode="ag-ui"`.
 
 #### `apiRequestSchema`
 
@@ -376,7 +376,7 @@ The `SessionManager` handles chat history.
 Enable sessions on `OmniChat` (or either chat provider) before rendering it. Session handling is disabled by default, so chats have no session creation, persistence, or rename requests unless you opt in.
 
 ```tsx
-<OmniChat api_mode="ag-ui" sessionStorageMode="api">
+<OmniChat apiMode="ag-ui" sessionStorageMode="api">
   <SessionManager />
   <ChatManager />
 </OmniChat>
@@ -437,7 +437,7 @@ function MyCustomChatUI() {
 
 **Resolution logic:**
 1. **Only one provider in the tree** â†’ returns that context directly. No store lookup needed.
-2. **Both providers present** â†’ uses the `api_mode` registered by `<OmniChat>` as a tiebreaker.
+2. **Both providers present** â†’ uses the `apiMode` registered by `<OmniChat>` as a tiebreaker.
 3. **Neither present** â†’ throws a descriptive error.
 
 > [!NOTE]
