@@ -546,10 +546,8 @@ type OmniChatBaseProps = {
   sessionStorageMode?: StorageMode;
   sessionRoute?: string;
   children?: ReactNode;
-} & (
-  | { useA2UI?: true; a2uiProps: A2UIProps }
-  | { useA2UI: false; a2uiProps?: never }
-);
+  a2uiProps?: A2UIProps;
+};
 
 /**
  * Props for `<OmniChat />`. The `chatApiSchema` prop is only accepted (and only

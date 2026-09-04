@@ -225,15 +225,20 @@ function RenderNode({
  */
 export function A2UICanvas({ emptyState, className, style }: A2UICanvasProps = {}) {
   const a2uiProps = useAIChatStore((state) => state.a2uiProps);
+  
+  if (!a2uiProps) {
+    throw new Error('a2uiProps must be provided in OmniChat to use A2UICanvas');
+  }
+
   const {
     agentId,
-    a2uiToolName = 'renderComponent',
-    a2uiVersion = 'V0.9',
+    a2uiToolName,
+    a2uiVersion = 'V0.9.1',
     includeBasicCatalog = true,
     includePreBuiltCustomComponents = true,
     layout = 'inline',
     catalog: providedCatalog,
-  } = a2uiProps || {};
+  } = a2uiProps;
   // ── Catalog composition ─────────────────────────────────────────────────
   const catalog = useMemo<Record<string, React.FC<any>>>(() => ({
     // pre-built custom catalog (our renderers.tsx)

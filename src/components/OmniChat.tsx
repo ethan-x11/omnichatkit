@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { OmniChatProps, A2UILayout } from '../types';
 import { AGUIChatProvider } from './AGUIChatProvider';
 import { AIChatProvider } from './AIChatProvider';
@@ -17,7 +17,6 @@ import { useAIChatStore } from '../store/useAIChatStore';
 export function OmniChat({
   api_mode,
   theme,
-  useA2UI = true,
   a2uiProps,
   apiEndpoint,
   chatApiSchema,
@@ -31,17 +30,27 @@ export function OmniChat({
   const setChatApiSchema = useAIChatStore((state) => state.setChatApiSchema);
   const setA2UIProps = useAIChatStore((state) => state.setA2UIProps);
 
+  const isInitialized = useRef(false);
+  if (!isInitialized.current) {
+    useAIChatStore.setState({
+      apiMode: api_mode,
+      chatApiSchema: api_mode === 'classic' ? chatApiSchema : undefined,
+      a2uiProps
+    });
+    isInitialized.current = true;
+  }
+
   useEffect(() => {
     setApiMode(api_mode);
     setChatApiSchema(api_mode === 'classic' ? chatApiSchema : undefined);
-    if (useA2UI && a2uiProps) {
+    if (a2uiProps) {
       setA2UIProps(a2uiProps);
     }
-  }, [api_mode, chatApiSchema, setApiMode, setChatApiSchema, useA2UI, a2uiProps, setA2UIProps]);
+  }, [api_mode, chatApiSchema, setApiMode, setChatApiSchema, a2uiProps, setA2UIProps]);
   
   // Map OmniChat prop 'a2uiRenderingOption' to ChatManager 'layout'
   const a2uiRenderingOption = a2uiProps?.a2uiRenderingOption;
-  const chatLayout: A2UILayout = (useA2UI && a2uiRenderingOption === 'detached') ? 'split' : 'inline';
+  const chatLayout: A2UILayout = (!!a2uiProps && a2uiRenderingOption === 'detached') ? 'split' : 'inline';
 
   // Select the appropriate provider based on api_mode
   const Provider = api_mode === 'ag-ui' ? AGUIChatProvider : AIChatProvider;
