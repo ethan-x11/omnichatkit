@@ -1,6 +1,4 @@
-export const CATALOG_ID = "https://omnichatkit.local/catalog/v1";
-
-import { definitions } from "./definitions";
+import { CATALOG_ID, definitions } from "./definitions";
 import { renderers } from "./renderers";
 
 export const catalog = renderers;

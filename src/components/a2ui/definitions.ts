@@ -3,7 +3,7 @@
  */
 import { z } from "zod";
 
-export const CATALOG_ID = "https://omnichatkit.local/catalog/v1";
+export const CATALOG_ID = "omnichatkit-catalog";
 
 /* child and children refer to component IDs (resolved at render time). */
 const childRef = z.string();
