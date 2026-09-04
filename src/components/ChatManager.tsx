@@ -1471,7 +1471,6 @@ export function ChatManager({
           <DialogContent
             className="flex flex-col overflow-hidden max-w-[90vw] md:max-w-[800px] w-full h-[85vh] p-0 border-none bg-transparent shadow-none"
             showCloseButton={true}
-            showOverlay={false}
             style={getFloatingDialogStyle(collapseToggleButtonPosition)}
           >
             {innerContent}
