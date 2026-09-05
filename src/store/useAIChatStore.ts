@@ -484,7 +484,11 @@ export const useAIChatStore = create<AIChatState>()(
     }),
     {
       name: 'omnichat-storage',
-      storage: createJSONStorage(() => typeof window !== 'undefined' ? sessionStorage : ({} as any)),
+      storage: createJSONStorage(() => typeof window !== 'undefined' ? sessionStorage : {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+      }),
       partialize: (state) => ({
         // Keep memory sessions, but never restore an active selection on reload.
         sessions: state.sessionStorageMode === 'memory' ? state.sessions : [],
