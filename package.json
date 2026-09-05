@@ -1,6 +1,6 @@
 {
   "name": "omnichatkit",
-  "version": "0.0.22-b",
+  "version": "0.0.23-b",
   "description": "A modular React component library for building AG-UI based AI chat interfaces with native Generative UI(A2UI) and Shadcn styling.",
   "keywords": [
     "omnichatkit",
