@@ -416,7 +416,7 @@ export function SessionManager({
           {sessions.map(s => (
             <div
               key={s.id}
-              className={cn(`group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors hover:bg-muted ${activeSessionId === s.id ? 'bg-muted font-medium' : ''}`, typeof listStyle?.containerStyle === 'string' ? listStyle.containerStyle : "")}
+              className={cn(`group relative flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors hover:bg-muted ${(activeSessionId === s.id || openSessionMenuId === s.id) ? 'bg-muted' : ''} ${activeSessionId === s.id ? 'font-medium' : ''}`, typeof listStyle?.containerStyle === 'string' ? listStyle.containerStyle : "")}
               style={typeof listStyle?.containerStyle === 'object' ? listStyle.containerStyle : undefined}
               onClick={() => handleSessionSelect(s.id)}
               onMouseEnter={() => showSessionActions(s.id)}
@@ -483,7 +483,7 @@ export function SessionManager({
               )}
 
               <div
-                className={cn("items-center", (hoveredSessionId === s.id || openSessionMenuId === s.id) ? "flex" : "hidden")}
+                className={cn("items-center absolute right-2 bg-muted pl-1 rounded-sm", (hoveredSessionId === s.id || openSessionMenuId === s.id) ? "flex" : "hidden")}
                 onClick={(e) => e.stopPropagation()}
               >
                 <Button
