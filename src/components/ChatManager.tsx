@@ -139,7 +139,7 @@ export function ChatManager({
     if (numMin <= numDefault && numDefault <= numMax) {
       resizableConfig = { defaultSize, minSize, maxSize };
     } else {
-      console.warn('ChatManager: resizable conditions failed. Ensure minSize <= defaultSize <= maxSize');
+      throw new Error('ChatManager: resizable conditions failed. Ensure minSize <= defaultSize <= maxSize');
     }
   }
 
