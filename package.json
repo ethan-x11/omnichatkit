@@ -64,7 +64,7 @@
     "lint": "tsc --noEmit",
     "prepublishOnly": "npm pkg delete devDependencies",
     "postpublish": "git checkout -- package.json",
-    "prepare": "yarn build"
+    "prepare": "yarn lint && yarn build"
   },
   "peerDependencies": {
     "react": "^19.0.0",
