@@ -430,20 +430,69 @@ export type ChatManagerBaseProps = {
   sendHistory?: boolean;
 };
 
+/**
+ * @description
+ * Resizable options for the ChatManager component.
+ * 
+ * @property {string | number} defaultSize - The default size of the component.
+ * @property {string | number} minSize - The minimum size of the component.
+ * @property {string | number} maxSize - The maximum size of the component.
+ * 
+ * @example
+ * ```
+ * const resizableOptions = {
+ *  defaultSize: '500px',
+ *  minSize: '200px',
+ *  maxSize: '800px'
+ * }
+ * ```
+ */
 export type ResizableOptions = {
   defaultSize: string | number;
 } & (
-  | { minSize: string | number; maxSize?: string | number }
-  | { minSize?: string | number; maxSize: string | number }
-);
+    | { minSize: string | number; maxSize?: string | number }
+    | { minSize?: string | number; maxSize: string | number }
+  );
 
 /**
  * Complete properties for the ChatManager component, which combines base properties
  * with display mode specific options.
  */
 export type ChatManagerProps = ChatManagerBaseProps & (
-  | { display: 'floating'; displayOptions?: never }
-  | { display?: 'embedded'; displayOptions?: { collapsible?: boolean; resizable?: ResizableOptions } }
+  | {
+    display: 'floating';
+    displayOptions?: never
+  }
+  | {
+    display?: 'embedded';
+    displayOptions?: {
+      /**
+       * Enable collapsible mode for the embedded chat interface.
+       * 
+       * @default false
+       */
+      collapsible?: boolean;
+      /**
+       * Enable resizability for the embedded chat interface.
+       * 
+       * @default unset
+       * 
+       * @constraint
+       * - Ensure minSize < defaultSize < maxSize.
+       * - Ensure Either minSize or maxSize or both are set alongside defaultSize.
+       * 
+       * @example
+       * ```
+       * const resizableOptions = {
+       *  defaultSize: '500px',
+       *  minSize: '200px',
+       *  maxSize: '800px'
+       * }
+       * ```
+       */
+      resizable?: ResizableOptions
+    }
+  }
 );
 
 export interface SessionListStyles {
