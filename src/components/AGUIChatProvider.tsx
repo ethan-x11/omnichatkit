@@ -64,7 +64,10 @@ export function AGUIChatProvider({ children, theme = 'standard', apiEndpoint = '
         role: 'user',
         content: createSessionTitlePrompt(messages),
       });
-      const title = normalizeSessionTitle(response || titleChatHelpers.messages.at(-1)?.content);
+      const lastMessage = titleChatHelpers.messages.at(-1);
+      const textPart = lastMessage?.parts?.find((p: any) => p.type === 'text');
+      const textContent = textPart && 'text' in textPart ? textPart.text : '';
+      const title = normalizeSessionTitle(response || textContent);
       if (!title) throw new Error('The agent returned an empty session title.');
       return title;
     } finally {

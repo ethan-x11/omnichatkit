@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { HttpAgent } from '@ag-ui/client';
 import { Message as AGUIMessage, Role, BaseEvent } from '@ag-ui/core';
-import { UseChatHelpers } from '../components/AIChatProvider';
+import { UseChatHelpers, ChatContextHelpers } from '../components/AIChatProvider';
 
 /**
  * Adapts the `@ag-ui/client` `HttpAgent` to match the Vercel AI SDK `useChat` API surface.
@@ -13,7 +13,7 @@ import { UseChatHelpers } from '../components/AIChatProvider';
  * @param config.agentId - The specific agent identifier, appended to the API route.
  * @returns An object matching the Vercel AI SDK `UseChatHelpers` interface, plus custom event data.
  */
-export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record<string, any>; agentId?: string }): UseChatHelpers {
+export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record<string, any>; agentId?: string }): Omit<ChatContextHelpers, 'sessionStorageMode'> & { events: BaseEvent[] } {
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitted' | 'streaming' | 'ready' | 'error'>('idle');
@@ -252,5 +252,6 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
     data,
     isLoading: status === 'submitted' || status === 'streaming',
     events,
-  } as unknown as UseChatHelpers & { events: BaseEvent[] };
+  } as unknown as Omit<ChatContextHelpers, 'sessionStorageMode'> & { events: BaseEvent[] };
 }
+

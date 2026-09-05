@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import type { Message as AiMessage, CreateMessage } from 'ai';
+import type { UIMessage as AiMessage, CreateUIMessage } from 'ai';
 
 /**
  * Available built-in themes for the chat interface.

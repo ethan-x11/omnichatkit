@@ -10,9 +10,15 @@ import type { StorageMode } from '../types';
 export type UseChatHelpers = ReturnType<typeof useChat>;
 export type ChatContextHelpers = UseChatHelpers & {
   sessionStorageMode: StorageMode;
+  input: string;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
+  append: (message: any, requestOptions?: any) => Promise<any>;
+  handleSubmit: (event?: { preventDefault?: () => void }, requestOptions?: any) => void;
 };
 
 export const AIChatContext = createContext<ChatContextHelpers | null>(null);
+
+import { DefaultChatTransport } from 'ai';
 
 /**
  * Provides the chat state context using the Vercel AI SDK (`useChat` hook) internally.
@@ -22,6 +28,7 @@ export const AIChatContext = createContext<ChatContextHelpers | null>(null);
  * @returns A context provider wrapping the chat UI components.
  */
 export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/api/chat', agentId, sessionId, sessionStorageMode = 'disabled', sessionRoute = '/session', chatApiSchema }: AIChatProviderProps) {
+  const [input, setInput] = React.useState('');
   const setTheme = useAIChatStore((state) => state.setTheme);
   const setSessionStorageMode = useAIChatStore((state) => state.setSessionStorageMode);
   const setSessionRoute = useAIChatStore((state) => state.setSessionRoute);
@@ -83,20 +90,25 @@ export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/a
 
   // Initialize Vercel AI SDK chat
   const chatHelpers = useChat({
-    api: finalApiRoute,
-    body: effectiveSessionId ? { sessionId: effectiveSessionId } : undefined,
-    ...({ prepareRequestBody } as any),
+    transport: new DefaultChatTransport({
+      api: finalApiRoute,
+      body: effectiveSessionId ? { sessionId: effectiveSessionId } : undefined,
+      prepareSendMessagesRequest: prepareRequestBody as any,
+    }),
     // Add additional AI SDK configurations here
   });
   const titleResponseRef = React.useRef('');
   const titleChatIdRef = React.useRef(`omnichatkit-title-${Math.random().toString(36).slice(2)}`);
   const autoTitledSessionIdsRef = React.useRef(new Set<string>());
   const titleChatHelpers = useChat({
-    api: finalApiRoute,
     id: titleChatIdRef.current,
-    body: { sessionOperation: 'generate-title', transient: true },
-    onFinish: (message) => {
-      titleResponseRef.current = message.content;
+    transport: new DefaultChatTransport({
+      api: finalApiRoute,
+      body: { sessionOperation: 'generate-title', transient: true },
+    }),
+    onFinish: (event) => {
+      const textPart = event.message.parts?.find((p: any) => p.type === 'text');
+      titleResponseRef.current = textPart && 'text' in textPart ? textPart.text : '';
     },
   });
 
@@ -109,21 +121,24 @@ export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/a
     titleChatHelpers.setMessages([]);
 
     try {
-      await titleChatHelpers.append(
-        { role: 'user', content: createSessionTitlePrompt(messages) },
-        { body: { sessionOperation: 'generate-title', transient: true } },
+      await titleChatHelpers.sendMessage(
+        { role: 'user', content: createSessionTitlePrompt(messages) } as any,
+        { body: { sessionOperation: 'generate-title', transient: true } } as any,
       );
-      const title = normalizeSessionTitle(titleResponseRef.current || titleChatHelpers.messages.at(-1)?.content);
+      const lastMessage = titleChatHelpers.messages.at(-1);
+      const textPart = lastMessage?.parts?.find(p => p.type === 'text');
+      const textContent = textPart && 'text' in textPart ? textPart.text : '';
+      const title = normalizeSessionTitle(titleResponseRef.current || textContent);
       if (!title) throw new Error('The agent returned an empty session title.');
       return title;
     } finally {
       titleChatHelpers.setMessages([]);
     }
-  }, [sessionsEnabled, titleChatHelpers.append, titleChatHelpers.messages, titleChatHelpers.setMessages]);
+  }, [sessionsEnabled, titleChatHelpers.sendMessage, titleChatHelpers.messages, titleChatHelpers.setMessages]);
 
   const sessionAwareAppend = React.useCallback(async (message: any, requestOptions?: any) => {
     if (!sessionsEnabled) {
-      return chatHelpers.append(message, requestOptions);
+      return chatHelpers.sendMessage(message, requestOptions);
     }
 
     const stateBeforeAppend = useAIChatStore.getState();
@@ -137,10 +152,10 @@ export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/a
       : activeSession?.title === 'New Session' && !activeSession.messages?.length;
     const firstMessage = typeof message.content === 'string' ? message.content : 'New Session';
     const resolvedSessionId = await ensureSession(firstMessage, requestedSessionId);
-    const response = chatHelpers.append(message, {
+    const response = chatHelpers.sendMessage(message, {
       ...requestOptions,
       body: { ...requestOptions?.body, ...(resolvedSessionId ? { sessionId: resolvedSessionId } : {}) },
-    });
+    } as any);
 
     if (isNewSession && resolvedSessionId && !autoTitledSessionIdsRef.current.has(resolvedSessionId)) {
       autoTitledSessionIdsRef.current.add(resolvedSessionId);
@@ -150,23 +165,25 @@ export function AIChatProvider({ children, theme = 'standard', apiEndpoint = '/a
     }
 
     return response;
-  }, [chatHelpers.append, ensureSession, generateInitialSessionTitle, renameSession, sessionId, sessionsEnabled]);
+  }, [chatHelpers.sendMessage, ensureSession, generateInitialSessionTitle, renameSession, sessionId, sessionsEnabled]);
 
   const sessionAwareHandleSubmit = React.useCallback((event?: { preventDefault?: () => void }, requestOptions?: any) => {
     event?.preventDefault?.();
-    const content = chatHelpers.input.trim();
+    const content = input.trim();
     if (!content) return;
 
-    chatHelpers.setInput('');
-    void sessionAwareAppend({ role: 'user', content }, requestOptions);
-  }, [chatHelpers.input, chatHelpers.setInput, sessionAwareAppend]);
+    setInput('');
+    void sessionAwareAppend({ role: 'user', content } as any, requestOptions);
+  }, [input, setInput, sessionAwareAppend]);
 
   const chatContextValue = React.useMemo(() => ({
     ...chatHelpers,
+    input,
+    setInput,
     append: sessionAwareAppend,
     handleSubmit: sessionAwareHandleSubmit,
     sessionStorageMode,
-  }), [chatHelpers, sessionAwareAppend, sessionAwareHandleSubmit, sessionStorageMode]);
+  }), [chatHelpers, input, setInput, sessionAwareAppend, sessionAwareHandleSubmit, sessionStorageMode]);
 
   return (
     <AIChatContext.Provider value={chatContextValue}>
