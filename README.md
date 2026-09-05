@@ -249,7 +249,7 @@ The `ChatManager` component comes with extensive styling and layout capabilities
 - **`display`** (`"floating" | "embedded"`): Controls the layout mode of the chat manager. 
 - **`displayOptions`** (`object`): Configuration for the selected display mode.
   - `collapsible` (`boolean`): When display is "embedded", renders the component as a floating drawer (`<Sheet>`) with a dynamic toggle button.
-
+  - `resizable` (`object`): Enables a drag-to-resize handle for embedded panels without needing an external wrapper. Provide sizing bounds via `{ defaultSize: number, minSize?: number, maxSize?: number }`.
 - **`position`** (`"left" | "right" | "top" | "bottom"`): Controls where the drawer docks and automatically aligns the close button correctly.
 - **`welcomeScreen`** (`boolean | ReactNode`): Set to `true` (default) to show the default welcome screen, or pass a custom React element.
 - **`maxInputCharacter`** (`number`): Optional limit for the maximum number of characters allowed in the chat input box.

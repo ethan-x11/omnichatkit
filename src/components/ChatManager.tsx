@@ -195,6 +195,102 @@ export function ChatManager({
   const [isA2UIOpen, setIsA2UIOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Resize State
+  const [size, setSize] = useState<number | undefined>(undefined);
+  const sizeRef = useRef<number | undefined>(undefined);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartPos = useRef<{ x: number, y: number, initialSize: number } | null>(null);
+
+  useEffect(() => {
+    if (resizableConfig && size === undefined) {
+      const initial = typeof resizableConfig.defaultSize === 'number' ? resizableConfig.defaultSize : parseFloat(resizableConfig.defaultSize);
+      setSize(initial);
+      sizeRef.current = initial;
+    }
+  }, [resizableConfig, size]);
+
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!resizableConfig) return;
+    setIsDragging(true);
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    const initialSize = sizeRef.current || (typeof resizableConfig.defaultSize === 'number' ? resizableConfig.defaultSize : parseFloat(resizableConfig.defaultSize));
+    dragStartPos.current = { x: clientX, y: clientY, initialSize };
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const parseSize = (s: string | number) => typeof s === 'number' ? s : parseFloat(s as string);
+
+    const handleDrag = (e: MouseEvent | TouchEvent) => {
+      if (!resizableConfig || !dragStartPos.current) return;
+      let clientX, clientY;
+      if ('touches' in e) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = (e as MouseEvent).clientX;
+        clientY = (e as MouseEvent).clientY;
+      }
+
+      const deltaX = clientX - dragStartPos.current.x;
+      const deltaY = clientY - dragStartPos.current.y;
+
+      let newSize = dragStartPos.current.initialSize;
+
+      if (position === 'right') {
+        newSize -= deltaX;
+      } else if (position === 'left') {
+        newSize += deltaX;
+      } else if (position === 'bottom') {
+        newSize -= deltaY;
+      } else if (position === 'top') {
+        newSize += deltaY;
+      }
+
+      const min = parseSize(resizableConfig.minSize);
+      const max = parseSize(resizableConfig.maxSize);
+
+      if (newSize < min) newSize = min;
+      if (newSize > max) newSize = max;
+
+      setSize(newSize);
+      sizeRef.current = newSize;
+    };
+
+    const handleDragEnd = () => {
+      setIsDragging(false);
+      dragStartPos.current = null;
+    };
+
+    document.addEventListener('mousemove', handleDrag);
+    document.addEventListener('mouseup', handleDragEnd);
+    document.addEventListener('touchmove', handleDrag, { passive: false });
+    document.addEventListener('touchend', handleDragEnd);
+
+    return () => {
+      document.removeEventListener('mousemove', handleDrag);
+      document.removeEventListener('mouseup', handleDragEnd);
+      document.removeEventListener('touchmove', handleDrag);
+      document.removeEventListener('touchend', handleDragEnd);
+    };
+  }, [isDragging, position, resizableConfig]);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = (position === 'left' || position === 'right') ? 'ew-resize' : 'ns-resize';
+    } else {
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
+    return () => {
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [isDragging, position]);
+
   // File Attachments State
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<{ type: string; file: File; base64: string }[]>([]);
@@ -385,10 +481,18 @@ export function ChatManager({
 
   if (isEmbedded || (!isSheet && !isFloating)) {
     if (position === 'left' || position === 'right') {
-      embeddedStyle = { maxWidth: '450px' };
+      embeddedStyle = { 
+        width: resizableConfig ? (size !== undefined ? `${size}px` : resizableConfig.defaultSize) : undefined,
+        minWidth: resizableConfig ? resizableConfig.minSize : undefined,
+        maxWidth: resizableConfig ? resizableConfig.maxSize : '450px'
+      };
       sizeClass += position === 'right' ? ' ml-auto' : ' mr-auto';
     } else if (position === 'top' || position === 'bottom') {
-      embeddedStyle = { maxHeight: '450px' };
+      embeddedStyle = { 
+        height: resizableConfig ? (size !== undefined ? `${size}px` : resizableConfig.defaultSize) : undefined,
+        minHeight: resizableConfig ? resizableConfig.minSize : undefined,
+        maxHeight: resizableConfig ? resizableConfig.maxSize : '450px'
+      };
       sizeClass += position === 'bottom' ? ' mt-auto' : ' mb-auto';
     } else {
       embeddedStyle = { minHeight: '600px', height: '800px' };
@@ -435,6 +539,38 @@ export function ChatManager({
       className={cn(`flex border rounded-xl flex-col relative ${chatContainerClass} ${sizeClass}`, typeof globalBackgroundStyle === 'string' ? globalBackgroundStyle : "", className)}
       style={{ ...(typeof globalBackgroundStyle === 'object' ? globalBackgroundStyle : {}), ...combinedStyle }}
     >
+      {resizableConfig && (position === 'right' || position === 'left') && (
+        <div
+          className={cn(
+            "absolute top-0 bottom-0 w-3 flex flex-col items-center justify-center cursor-ew-resize z-50 group",
+            position === 'right' ? "left-0 -translate-x-1/2" : "right-0 translate-x-1/2"
+          )}
+          style={{ cursor: 'ew-resize' }}
+          onMouseDown={handleDragStart}
+          onTouchStart={handleDragStart}
+        >
+          <div className={cn(
+            "h-12 w-1 rounded-full transition-colors",
+            isDragging ? "bg-primary" : "bg-border group-hover:bg-primary/50"
+          )} />
+        </div>
+      )}
+      {resizableConfig && (position === 'top' || position === 'bottom') && (
+        <div
+          className={cn(
+            "absolute left-0 right-0 h-3 flex items-center justify-center cursor-ns-resize z-50 group",
+            position === 'bottom' ? "top-0 -translate-y-1/2" : "bottom-0 translate-y-1/2"
+          )}
+          style={{ cursor: 'ns-resize' }}
+          onMouseDown={handleDragStart}
+          onTouchStart={handleDragStart}
+        >
+          <div className={cn(
+            "w-12 h-1 rounded-full transition-colors",
+            isDragging ? "bg-primary" : "bg-border group-hover:bg-primary/50"
+          )} />
+        </div>
+      )}
       {(isSheet || isFloating || isEmbedded) && (
         <div
           className={cn("p-4 border-b flex flex-row items-center justify-between shrink-0", typeof headerStyle.backgroundStyle === 'string' ? headerStyle.backgroundStyle : "")}
