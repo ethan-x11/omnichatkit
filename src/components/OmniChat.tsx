@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { OmniChatProps, A2UILayout } from '../types';
 import { AGUIChatProvider } from './AGUIChatProvider';
 import { AIChatProvider } from './AIChatProvider';
-import { useAIChatStore } from '../store/useAIChatStore';
+import { useAIChatStore, AIChatState } from '../store/useAIChatStore';
 
 /**
  * The main wrapper component for OmniChatKit.
@@ -26,9 +26,9 @@ export function OmniChat({
   children
 }: OmniChatProps) {
 
-  const setApiMode = useAIChatStore((state) => state.setApiMode);
-  const setChatApiSchema = useAIChatStore((state) => state.setChatApiSchema);
-  const setA2UIProps = useAIChatStore((state) => state.setA2UIProps);
+  const setApiMode = useAIChatStore((state: AIChatState) => state.setApiMode);
+  const setChatApiSchema = useAIChatStore((state: AIChatState) => state.setChatApiSchema);
+  const setA2UIProps = useAIChatStore((state: AIChatState) => state.setA2UIProps);
 
   const isInitialized = useRef(false);
   if (!isInitialized.current) {

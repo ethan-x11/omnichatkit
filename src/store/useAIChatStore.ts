@@ -189,7 +189,7 @@ const messagesAreEqual = (currentMessages: ChatMessage[] | undefined, nextMessag
 /**
  * The global Zustand state interface for OmniChatKit.
  */
-interface AIChatState {
+export interface AIChatState {
   theme: ChatTheme;
   sessionStorageMode: StorageMode;
   sessionRoute: string;
