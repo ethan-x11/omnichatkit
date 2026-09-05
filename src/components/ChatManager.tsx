@@ -123,7 +123,6 @@ export function ChatManager({
   inputTypeList
 }: ChatManagerProps) {
   const collapsible = displayOptions?.collapsible ?? false;
-  const isResizable = displayOptions?.isResizable ?? false;
   const {
     messageStyle = {},
     inputSectionStyle = {},
@@ -175,7 +174,6 @@ export function ChatManager({
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [isA2UIOpen, setIsA2UIOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [customDimension, setCustomDimension] = useState(450);
 
   // File Attachments State
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
@@ -257,34 +255,6 @@ export function ChatManager({
     }
     return map;
   }, [events]);
-
-  const startResizing = (e: React.MouseEvent, dimension: 'width' | 'height') => {
-    e.preventDefault();
-    const isWidth = dimension === 'width';
-    const startPos = isWidth ? e.clientX : e.clientY;
-    const startDim = customDimension;
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      const delta = isWidth ? moveEvent.clientX - startPos : moveEvent.clientY - startPos;
-      let newDim = startDim;
-      if (position === 'right') newDim = startDim - delta;
-      else if (position === 'left') newDim = startDim + delta;
-      else if (position === 'bottom') newDim = startDim - delta;
-      else if (position === 'top') newDim = startDim + delta;
-
-      if (newDim < 250) newDim = 250;
-      if (newDim > Math.max(800, window.innerWidth * 0.8)) newDim = Math.max(800, window.innerWidth * 0.8);
-      setCustomDimension(newDim);
-    };
-
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  };
 
   const handleCopy = (id: string, content: string) => {
     navigator.clipboard.writeText(content);
@@ -395,10 +365,10 @@ export function ChatManager({
 
   if (isEmbedded || (!isSheet && !isFloating)) {
     if (position === 'left' || position === 'right') {
-      embeddedStyle = { maxWidth: isResizable ? `${customDimension}px` : '450px' };
+      embeddedStyle = { maxWidth: '450px' };
       sizeClass += position === 'right' ? ' ml-auto' : ' mr-auto';
     } else if (position === 'top' || position === 'bottom') {
-      embeddedStyle = { maxHeight: isResizable ? `${customDimension}px` : '450px' };
+      embeddedStyle = { maxHeight: '450px' };
       sizeClass += position === 'bottom' ? ' mt-auto' : ' mb-auto';
     } else {
       embeddedStyle = { minHeight: '600px', height: '800px' };
@@ -406,19 +376,6 @@ export function ChatManager({
   }
 
   const combinedStyle = { ...embeddedStyle, ...style };
-
-  const resizeHandle = isEmbedded && isResizable ? (
-    <div
-      className={cn(
-        "absolute z-10 hover:bg-foreground/10 transition-colors",
-        position === 'right' ? "left-0 top-0 bottom-0 w-1.5 cursor-ew-resize" :
-          position === 'left' ? "right-0 top-0 bottom-0 w-1.5 cursor-ew-resize" :
-            position === 'bottom' ? "top-0 left-0 right-0 h-1.5 cursor-ns-resize" :
-              position === 'top' ? "bottom-0 left-0 right-0 h-1.5 cursor-ns-resize" : ""
-      )}
-      onMouseDown={(e) => startResizing(e, position === 'left' || position === 'right' ? 'width' : 'height')}
-    />
-  ) : null;
 
   if (!isHydrated) {
     if (isFloating || isSheet || isEmbeddedCollapsible) {
@@ -458,7 +415,6 @@ export function ChatManager({
       className={cn(`flex border rounded-xl flex-col relative ${chatContainerClass} ${sizeClass}`, typeof globalBackgroundStyle === 'string' ? globalBackgroundStyle : "", className)}
       style={{ ...(typeof globalBackgroundStyle === 'object' ? globalBackgroundStyle : {}), ...combinedStyle }}
     >
-      {resizeHandle}
       {(isSheet || isFloating || isEmbedded) && (
         <div
           className={cn("p-4 border-b flex flex-row items-center justify-between shrink-0", typeof headerStyle.backgroundStyle === 'string' ? headerStyle.backgroundStyle : "")}

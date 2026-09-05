@@ -430,13 +430,20 @@ export type ChatManagerBaseProps = {
   sendHistory?: boolean;
 };
 
+export type ResizableOptions = {
+  defaultSize: string | number;
+} & (
+  | { minSize: string | number; maxSize?: string | number }
+  | { minSize?: string | number; maxSize: string | number }
+);
+
 /**
  * Complete properties for the ChatManager component, which combines base properties
  * with display mode specific options.
  */
 export type ChatManagerProps = ChatManagerBaseProps & (
   | { display: 'floating'; displayOptions?: never }
-  | { display?: 'embedded'; displayOptions?: { collapsible?: boolean; isResizable?: boolean } }
+  | { display?: 'embedded'; displayOptions?: { collapsible?: boolean; resizable?: ResizableOptions } }
 );
 
 export interface SessionListStyles {
