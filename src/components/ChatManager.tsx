@@ -122,7 +122,27 @@ export function ChatManager({
   sendHistory = true,
   inputTypeList
 }: ChatManagerProps) {
-  const collapsible = displayOptions?.collapsible ?? false;
+  const collapsible = (displayOptions as any)?.collapsible ?? false;
+  
+  let resizableConfig = undefined;
+  if ((displayOptions as any)?.resizable) {
+    const parseSize = (s: string | number) => typeof s === 'number' ? s : parseFloat(s as string);
+    
+    let { defaultSize, minSize, maxSize } = (displayOptions as any).resizable;
+    if (minSize === undefined) minSize = defaultSize;
+    if (maxSize === undefined) maxSize = defaultSize;
+    
+    const numDefault = parseSize(defaultSize);
+    const numMin = parseSize(minSize);
+    const numMax = parseSize(maxSize);
+    
+    if (numMin <= numDefault && numDefault <= numMax) {
+      resizableConfig = { defaultSize, minSize, maxSize };
+    } else {
+      console.warn('ChatManager: resizable conditions failed. Ensure minSize <= defaultSize <= maxSize');
+    }
+  }
+
   const {
     messageStyle = {},
     inputSectionStyle = {},
