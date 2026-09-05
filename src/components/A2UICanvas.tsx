@@ -224,7 +224,9 @@ function RenderNode({
  * @returns The rendered UI canvas.
  */
 export function A2UICanvas({ emptyState, className, style }: A2UICanvasProps = {}) {
-  const a2uiProps = useAIChatStore((state) => state.a2uiProps);
+  // Fallback to getState() to prevent tearing on initial render if OmniChat mutated state synchronously
+  const storeA2uiProps = useAIChatStore((state) => state.a2uiProps);
+  const a2uiProps = storeA2uiProps || useAIChatStore.getState().a2uiProps;
   
   if (!a2uiProps) {
     throw new Error('a2uiProps must be provided in OmniChat to use A2UICanvas');
