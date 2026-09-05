@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { HttpAgent } from '@ag-ui/client';
 import { Message as AGUIMessage, Role, BaseEvent } from '@ag-ui/core';
 import { UseChatHelpers, ChatContextHelpers } from '../components/AIChatProvider';
+import { useAIChatStore } from '../store/useAIChatStore';
 
 /**
  * Adapts the `@ag-ui/client` `HttpAgent` to match the Vercel AI SDK `useChat` API surface.
@@ -102,17 +103,20 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
     setError(undefined);
     setEvents([]);
     
-    try {
-      const aguiMessages = messagesRef.current.map(m => ({
-        ...m
-      })) as AGUIMessage[];
-
+    const runAgentTurn = async (currentMessages: any[]): Promise<string> => {
       setStatus('streaming');
-      agentRef.current.setMessages(aguiMessages);
+      agentRef.current!.setMessages(currentMessages as AGUIMessage[]);
       
       abortControllerRef.current = new AbortController();
       
-      const result = await agentRef.current.runAgent({}, {
+      const actions = useAIChatStore.getState().actions || {};
+      const tools = Object.values(actions).map(a => ({
+        name: a.name,
+        description: a.description,
+        parameters: a.parameters
+      }));
+      
+      const result = await agentRef.current!.runAgent({ tools: tools.length > 0 ? tools : undefined }, {
         onEvent: (params) => {
           setEvents((prev) => [...prev, params.event]);
         },
@@ -176,6 +180,9 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
                 });
               }
             });
+            // Preserve older messages not returned by this run (runAgent merges but we want full history)
+            // Actually agent.setMessages replaces entirely, but AG-UI keeps them if not truncated.
+            // Let's assume params.messages contains all messages from this session.
             messagesRef.current = processedMessages;
             const latestAssistantMessage = [...processedMessages].reverse().find((message) => message.role === 'assistant');
             if (typeof latestAssistantMessage?.content === 'string' && latestAssistantMessage.content) {
@@ -186,8 +193,51 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
         },
       });
       
+      const newMessages = messagesRef.current;
+      const latestMessage = newMessages[newMessages.length - 1];
+      
+      if (latestMessage && latestMessage.toolInvocations && latestMessage.toolInvocations.length > 0) {
+        let hasToolResult = false;
+        const newToolResults: any[] = [];
+        
+        for (const invocation of latestMessage.toolInvocations) {
+          const action = actions[invocation.toolName];
+          if (action && action.handler) {
+            try {
+              const res = await action.handler(invocation.args);
+              newToolResults.push({
+                id: Date.now().toString() + Math.random().toString().slice(2, 6),
+                role: 'tool',
+                content: typeof res === 'string' ? res : JSON.stringify(res),
+                toolCallId: invocation.toolCallId
+              });
+              hasToolResult = true;
+            } catch (err) {
+              newToolResults.push({
+                id: Date.now().toString() + Math.random().toString().slice(2, 6),
+                role: 'tool',
+                content: String(err),
+                error: String(err),
+                toolCallId: invocation.toolCallId
+              });
+              hasToolResult = true;
+            }
+          }
+        }
+        
+        if (hasToolResult) {
+          messagesRef.current = [...messagesRef.current, ...newToolResults];
+          setMessages(messagesRef.current);
+          return await runAgentTurn(messagesRef.current);
+        }
+      }
+      
       setStatus('ready');
       return lastAssistantResponseRef.current;
+    };
+
+    try {
+      return await runAgentTurn(messagesRef.current);
     } catch (err) {
       const isAborted = String(err).toLowerCase().includes('aborted') || (err instanceof Error && err.name === 'AbortError');
       if (isAborted) {

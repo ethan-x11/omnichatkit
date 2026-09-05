@@ -4,6 +4,7 @@ export * from './store/useAIChatStore';
 export { AIChatContext, useAIChatContext, type UseChatHelpers } from './components/AIChatProvider';
 export { AGUIChatContext, useAGUIChatContext } from './components/AGUIChatProvider';
 export * from './hooks/useAGUIChat';
+export * from './hooks/useAGUIAction';
 export * from './hooks/useChatContext';
 export * from './components/ChatManager';
 export * from './components/SessionManager';

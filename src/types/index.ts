@@ -41,6 +41,20 @@ export interface A2UICatalog {
   [componentName: string]: React.FC<any>;
 }
 
+/**
+ * Defines a frontend-provided tool action for the LLM.
+ */
+export interface AGUIAction {
+  name: string;
+  description: string;
+  parameters: {
+    type: 'object';
+    properties: Record<string, any>;
+    required?: string[];
+  };
+  handler: (args: Record<string, any>) => Promise<any> | any;
+}
+
 export interface LabelStyles {
   titleStyle?: React.CSSProperties | string;
   subtitleStyle?: React.CSSProperties | string;

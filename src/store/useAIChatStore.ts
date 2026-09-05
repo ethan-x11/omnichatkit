@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { A2UICatalog, ApiSchema, ChatTheme, StorageMode, A2UIProps } from '../types';
+import { A2UICatalog, ApiSchema, ChatTheme, StorageMode, A2UIProps, AGUIAction } from '../types';
 
 /** Allowed roles in a conversation. */
 export type Role = 'system' | 'user' | 'assistant' | 'tool';
@@ -224,6 +224,9 @@ export interface AIChatState {
   setSessionPinned: (id: string, isPinned: boolean) => Promise<ChatSession | undefined>;
   removeSession: (id: string) => Promise<void>;
   updateSessionMessages: (id: string, messages: any[]) => Promise<ChatSession | undefined>;
+  actions: Record<string, AGUIAction>;
+  registerAction: (action: AGUIAction) => void;
+  unregisterAction: (name: string) => void;
 }
 export const useAIChatStore = create<AIChatState>()(
   persist(
@@ -250,6 +253,14 @@ export const useAIChatStore = create<AIChatState>()(
       resumeExecution: () => {},
       setResumeExecution: (fn) => set({ resumeExecution: fn }),
     
+      actions: {},
+      registerAction: (action) => set((state) => ({ actions: { ...state.actions, [action.name]: action } })),
+      unregisterAction: (name) => set((state) => {
+        const newActions = { ...state.actions };
+        delete newActions[name];
+        return { actions: newActions };
+      }),
+
       sessions: [],
       activeSessionId: null,
       setSessions: (sessions) => {

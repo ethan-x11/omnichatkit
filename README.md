@@ -485,6 +485,37 @@ This proxy ensures unauthorized requests are immediately dropped (returning `401
 ### 9. Working with AI Reasoning (e.g. DeepSeek `<think>`)
 OmniChatKit automatically parses and extracts `<think>` tags from incoming model streams. It strips these out of the primary text response and renders them natively as a beautiful, collapsible "Reasoning" accordion inside the message block! No extra configuration is required.
 
+### 10. Frontend Action Tooling (AG-UI)
+
+OmniChatKit provides a powerful way to define frontend tools that the AI agent can call using the `useAGUIAction` hook. This allows you to integrate application-specific behaviors like UI actions, user confirmations, or data fetching seamlessly into the agent's workflow.
+
+```tsx
+import { useAGUIAction } from "omnichatkit";
+
+function MyInteractiveComponent() {
+  useAGUIAction({
+    name: "confirmAction",
+    description: "Ask the user to confirm a specific action before proceeding",
+    parameters: {
+      type: "object",
+      properties: {
+        action: { type: "string", description: "The action that needs user confirmation" }
+      },
+      required: ["action"],
+    },
+    handler: async ({ action }) => {
+      // Execute your frontend logic, like showing a confirmation dialog
+      const confirmed = window.confirm(`Proceed with: ${action}?`);
+      return confirmed ? "approved" : "rejected";
+    },
+  });
+
+  return <div>My Component</div>;
+}
+```
+
+Registered tools are automatically injected into the `RunAgentInput.tools` payload during the AG-UI agent turn, and the chat hook natively awaits the `handler` execution and appends the result to the conversation automatically.
+
 ---
 
 ## Core Architecture
@@ -515,10 +546,11 @@ OmniChatKit exports all necessary hooks, components, and types to give you full 
 
 **Hooks**
 - `useAIChatStore`
-- `useChatContext` â€” auto-selects the correct context based on the active provider
-- `useAIChatContext` â€” explicit classic (Vercel AI SDK) context accessor
-- `useAGUIChatContext` â€” explicit AG-UI context accessor
+- `useChatContext` — auto-selects the correct context based on the active provider
+- `useAIChatContext` — explicit classic (Vercel AI SDK) context accessor
+- `useAGUIChatContext` — explicit AG-UI context accessor
 - `useAGUIChat`
+- `useAGUIAction`
 - `useHITL`
 - `useInterrupts`
 

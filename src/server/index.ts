@@ -129,7 +129,7 @@ export function serveOmniChat(options: OmniChatServerOptions = {}) {
       if (identity.name) encodedName = encodeURIComponent(identity.name);
     }
 
-    // Forward user identity headers (mimics CopilotKit identifyUser)
+    // Forward user identity headers
     reqHeaders.set("x-user-id", id || "demo-user");
     reqHeaders.set("x-user-name", encodedName ? decodeURIComponent(encodedName) : "Demo User");
 
