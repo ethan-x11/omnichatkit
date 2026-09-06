@@ -1272,7 +1272,7 @@ export function ChatManager({
             )}
             <div className="flex gap-2 w-full items-end relative">
               {inputTypeList && inputTypeList.length > 0 && (
-                <div className="relative shrink-0 flex items-center justify-center h-full mb-1" ref={attachMenuRef}>
+                <div className="relative z-50 shrink-0 flex items-center justify-center mb-1" ref={attachMenuRef}>
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -1284,7 +1284,7 @@ export function ChatManager({
                     type="button"
                     variant="outline"
                     size="icon"
-                    className={cn("rounded-full w-10 h-10 border-dashed", typeof inputSectionStyle.attachmentMenuStyles?.plusButtonContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.plusButtonContainerStyles : "")}
+                    className={cn("rounded-full w-10 h-10 border-dashed relative z-50 bg-background", typeof inputSectionStyle.attachmentMenuStyles?.plusButtonContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.plusButtonContainerStyles : "")}
                     style={typeof inputSectionStyle.attachmentMenuStyles?.plusButtonContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.plusButtonContainerStyles : undefined}
                     onClick={() => setIsAttachMenuOpen(!isAttachMenuOpen)}
                   >
@@ -1298,65 +1298,50 @@ export function ChatManager({
                     </span>
                   </Button>
 
-                  {isAttachMenuOpen && (
-                    <div
-                      className={cn("absolute bottom-[calc(100%+0.5rem)] left-0 bg-background/80 backdrop-blur-md border border-border/50 shadow-lg rounded-xl p-1 z-50 flex flex-col min-w-[120px] animate-in fade-in zoom-in duration-200 origin-bottom-left", typeof inputSectionStyle.attachmentMenuStyles?.menuContainerStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuContainerStyles : "")}
-                      style={typeof inputSectionStyle.attachmentMenuStyles?.menuContainerStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuContainerStyles : undefined}
-                    >
-                      {inputTypeList.includes('image') && (
-                        <button
-                          type="button"
-                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-xs hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
-                          style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
-                          onClick={() => triggerFileInput('image/*')}
-                        >
-                          <span className={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : ""} style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : undefined}>
-                            <ImageIcon size={14} className="text-zinc-500" />
-                          </span>
-                          Image
-                        </button>
-                      )}
-                      {inputTypeList.includes('document') && (
-                        <button
-                          type="button"
-                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-xs hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
-                          style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
-                          onClick={() => triggerFileInput('.pdf,.doc,.docx,.txt,application/pdf,text/plain')}
-                        >
-                          <span className={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : ""} style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : undefined}>
-                            <FileText size={14} className="text-zinc-500" />
-                          </span>
-                          Document
-                        </button>
-                      )}
-                      {inputTypeList.includes('audio') && (
-                        <button
-                          type="button"
-                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-xs hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
-                          style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
-                          onClick={() => triggerFileInput('audio/*')}
-                        >
-                          <span className={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : ""} style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : undefined}>
-                            <Mic size={14} className="text-zinc-500" />
-                          </span>
-                          Audio
-                        </button>
-                      )}
-                      {inputTypeList.includes('video') && (
-                        <button
-                          type="button"
-                          className={cn("flex items-center gap-2.5 px-2.5 py-2 text-xs hover:bg-accent hover:text-accent-foreground rounded-lg text-left transition-colors text-foreground font-medium", typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : "")}
-                          style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined}
-                          onClick={() => triggerFileInput('video/*')}
-                        >
-                          <span className={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : ""} style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : undefined}>
-                            <Video size={14} className="text-zinc-500" />
-                          </span>
-                          Video
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  {/* Radial Menu Items */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40">
+                    {[
+                      { type: 'image', icon: ImageIcon, label: 'Image', accept: 'image/*' },
+                      { type: 'document', icon: FileText, label: 'Document', accept: '.pdf,.doc,.docx,.txt,application/pdf,text/plain' },
+                      { type: 'audio', icon: Mic, label: 'Audio', accept: 'audio/*' },
+                      { type: 'video', icon: Video, label: 'Video', accept: 'video/*' }
+                    ]
+                      .filter(item => inputTypeList.includes(item.type as any))
+                      .map((item, idx, arr) => {
+                        const isOpen = isAttachMenuOpen;
+                        const angle = arr.length === 1 ? 45 : (0 + (85 / (arr.length - 1)) * idx);
+                        const rad = (angle - 90) * (Math.PI / 180);
+                        const radius = 90; // Distance from center
+                        const x = isOpen ? Math.cos(rad) * radius : 0;
+                        const y = isOpen ? Math.sin(rad) * radius : 0;
+
+                        return (
+                          <button
+                            key={item.type}
+                            type="button"
+                            title={item.label}
+                            onClick={() => {
+                              triggerFileInput(item.accept);
+                              setIsAttachMenuOpen(false);
+                            }}
+                            className={cn(
+                              "absolute top-0 left-0 w-10 h-10 rounded-full bg-background border border-border shadow-md flex items-center justify-center text-foreground hover:bg-accent transition-all duration-300 pointer-events-auto",
+                              isOpen ? "opacity-100" : "opacity-0 pointer-events-none",
+                              typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : ""
+                            )}
+                            style={{
+                              transform: `translate(${x}px, ${y}px) scale(${isOpen ? 1 : 0.5})`,
+                              transitionDelay: isOpen ? `${idx * 40}ms` : '0ms',
+                              ...(typeof inputSectionStyle.attachmentMenuStyles?.menuItemStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemStyles : undefined)
+                            }}
+                          >
+                            <span className={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'string' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : ""} style={typeof inputSectionStyle.attachmentMenuStyles?.menuItemIconStyles === 'object' ? inputSectionStyle.attachmentMenuStyles.menuItemIconStyles : undefined}>
+                              <item.icon size={16} className="text-zinc-500" />
+                            </span>
+                          </button>
+                        );
+                      })}
+                  </div>
                 </div>
               )}
               <div

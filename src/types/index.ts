@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import type { UIMessage as AiMessage, CreateUIMessage } from 'ai';
 
+
 /**
  * Available built-in themes for the chat interface.
  */
@@ -384,6 +385,8 @@ export interface ChatManagerComponentStyles {
   backgroundStyle?: React.CSSProperties | string;
 }
 
+export type InputTypeList = Array<'image' | 'audio' | 'video' | 'document'>;
+
 /**
  * Core configuration properties for the ChatManager component.
  */
@@ -397,7 +400,7 @@ export type ChatManagerBaseProps = {
   /** Advanced custom styling for internal components. */
   chatManagerComponentStyles?: ChatManagerComponentStyles;
   /** Allowed types of attachments the user can upload. */
-  inputTypeList?: Array<'image' | 'audio' | 'video' | 'document'>;
+  inputTypeList?: InputTypeList;
   /** Position of the component. */
   position?: ComponentPosition;
   /** Where to place the collapse toggle button. */
