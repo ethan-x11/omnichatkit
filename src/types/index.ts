@@ -241,6 +241,8 @@ export interface AIChatProviderProps {
   apiEndpoint?: string;
   /** Optional identifier for the current agent context. */
   agentId?: string;
+  /** Optional description for the current agent context. */
+  agentDescription?: string;
   /** Unique ID for the current chat session. */
   sessionId?: string;
   /** How session state should be managed. */
@@ -426,6 +428,8 @@ export type ChatManagerBaseProps = {
   promptChips?: PromptChips;
   /** The active agent's ID. */
   agentId?: string;
+  /** The description of the active agent. */
+  agentDescription?: string;
   /** The active session ID. */
   sessionId?: string;
   /** Position for the detached A2UI canvas (used when layout is 'split'). */

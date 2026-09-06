@@ -14,7 +14,7 @@ import { useAIChatStore } from '../store/useAIChatStore';
  * @param config.agentId - The specific agent identifier, appended to the API route.
  * @returns An object matching the Vercel AI SDK `UseChatHelpers` interface, plus custom event data.
  */
-export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record<string, any>; agentId?: string }): Omit<ChatContextHelpers, 'sessionStorageMode'> & { events: BaseEvent[] } {
+export function useAGUIChat({ api, body, agentId, agentDescription }: { api: string; body?: Record<string, any>; agentId?: string; agentDescription?: string }): Omit<ChatContextHelpers, 'sessionStorageMode'> & { events: BaseEvent[] } {
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitted' | 'streaming' | 'ready' | 'error'>('idle');
@@ -40,12 +40,13 @@ export function useAGUIChat({ api, body, agentId }: { api: string; body?: Record
     return new HttpAgent({
       url: finalApiUrl,
       threadId: currentSessionId,
+      description: agentDescription,
       fetch: (fetchUrl, init) => fetch(fetchUrl, {
         ...init,
         signal: abortControllerRef.current?.signal || init?.signal
       })
     });
-  }, [agentId, api]);
+  }, [agentId, api, agentDescription]);
 
   useEffect(() => {
     const currentSessionId = body?.sessionId;

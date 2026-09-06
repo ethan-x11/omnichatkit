@@ -15,7 +15,7 @@ export const AGUIChatContext = createContext<ChatContextHelpers | null>(null);
  * @param props - Provider configuration.
  * @returns A context provider wrapping the chat UI components.
  */
-export function AGUIChatProvider({ children, theme = 'standard', apiEndpoint = '/api/agent', agentId, sessionId, sessionStorageMode = 'disabled', sessionRoute = '/session' }: AIChatProviderProps) {
+export function AGUIChatProvider({ children, theme = 'standard', apiEndpoint = '/api/agent', agentId, agentDescription, sessionId, sessionStorageMode = 'disabled', sessionRoute = '/session' }: AIChatProviderProps) {
   const setTheme = useAIChatStore((state) => state.setTheme);
   const setSessionStorageMode = useAIChatStore((state) => state.setSessionStorageMode);
   const setSessionRoute = useAIChatStore((state) => state.setSessionRoute);
@@ -44,12 +44,14 @@ export function AGUIChatProvider({ children, theme = 'standard', apiEndpoint = '
   const chatHelpers = useAGUIChat({
     api: apiEndpoint,
     body: sessionsEnabled ? (activeSessionId ? { sessionId: activeSessionId } : (sessionId ? { sessionId } : undefined)) : undefined,
-    agentId
+    agentId,
+    agentDescription
   });
   const autoTitledSessionIdsRef = React.useRef(new Set<string>());
   const titleChatHelpers = useAGUIChat({
     api: apiEndpoint,
     agentId,
+    agentDescription
   });
 
   const generateInitialSessionTitle = React.useCallback(async (messages: SessionTitleMessage[]) => {

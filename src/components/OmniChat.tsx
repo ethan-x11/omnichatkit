@@ -57,12 +57,13 @@ export function OmniChat({
 
   // Extract optional connection params from chatManagerProps
   const agentId = chatManagerProps?.agentId;
+  const agentDescription = chatManagerProps?.agentDescription;
   const sessionId = chatManagerProps?.sessionId;
   const normalizedSessionRoute = sessionRoute.startsWith('/') ? sessionRoute : `/${sessionRoute}`;
 
   // Render the provider, children, and automatically inject the ChatManager
   return (
-    <Provider theme={theme} apiEndpoint={apiEndpoint} agentId={agentId} sessionId={sessionId} sessionStorageMode={sessionStorageMode} sessionRoute={normalizedSessionRoute} chatApiSchema={apiMode === 'classic' ? chatApiSchema : undefined}>
+    <Provider theme={theme} apiEndpoint={apiEndpoint} agentId={agentId} agentDescription={agentDescription} sessionId={sessionId} sessionStorageMode={sessionStorageMode} sessionRoute={normalizedSessionRoute} chatApiSchema={apiMode === 'classic' ? chatApiSchema : undefined}>
       <div className="flex w-full h-full gap-4">
         {children}
       </div>
